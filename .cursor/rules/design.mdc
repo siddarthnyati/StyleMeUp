@@ -1,0 +1,73 @@
+---
+description: StyleMeUp design and engineering conventions — applies to every file
+globs:
+  - "**/*.{ts,tsx,js,jsx,md,mdx}"
+alwaysApply: true
+---
+
+# StyleMeUp · Cursor rules
+
+You are working in the StyleMeUp repo. Before generating any code or copy, read:
+
+1. `DESIGN.md` — the brand bible. **The document wins over your generation, every time.**
+2. `AGENTS.md` — engineering conventions for AI agents.
+
+## Two laws
+
+1. **`DESIGN.md` is the contract.** Every line of code, color, motion timing, and copy must trace back to a section. If you can't cite one, ask before generating.
+2. **The blank screen is the enemy.** No empty states. No skeleton loaders >400ms. Every wait is editorial.
+
+## The two registers
+
+- **Magazine** = `--void #000000` true black. Discover, trend features, look reveals. Monumental UPPERCASE display, full-bleed cinematic imagery. Voice: declarative, verbless, final.
+- **Sanctuary** = `--paper #FFFFFF` true white. Closet, capture, settings. Lowercase italic display, generous whitespace. Voice: hushed, intimate, lowercase.
+
+**Never mix registers on one screen.** Every screen file declares its register at the top:
+
+```ts
+/**
+ * @register Magazine
+ * @design-ref DESIGN.md §1.5, §10
+ */
+```
+
+## Tokens are sacred
+
+Import every color, type, spacing, and timing value from `tokens/`. Never hard-code. If a value isn't in `tokens/`, add it there first with a comment citing `DESIGN.md`.
+
+```ts
+// ❌ never
+backgroundColor: '#000000'
+
+// ✓ always
+import { colors } from '@/tokens';
+backgroundColor: colors.void
+```
+
+## Hard bans (from DESIGN.md §4)
+
+Visual: purple/blue gradients · glassmorphism · rounded corners ≥8px on cards/buttons · Material drop shadows · stock photography · AI-generated faces · gradients on text · pattern backgrounds.
+
+Copy: sparkle emoji ✨ · "Powered by AI" · "Let's…" · exclamation points outside error recovery · "magic/smart/intelligent/amazing" · onboarding cheerfulness · ANY emoji in product UI.
+
+Layout: dashboard layouts · masonry · side rails on mobile · tab bars >4 items · modals for benign actions · two registers on one screen.
+
+Motion: spring physics on chrome · parallax on text · 3D card flips · autoplay sound · pulse animations on CTAs · bounce-in modals.
+
+## The Vogue test
+
+Before any string ships, ask: *would this sentence appear, verbatim, in a Vogue or Burberry campaign?* If no, rewrite. If still no, delete.
+
+## Stack — don't deviate
+
+Expo + React Native + TypeScript + Reanimated 3 + Skia. Backend Supabase. Web prototype Next.js 15 + Tailwind. Don't propose alternatives without surfacing the reason.
+
+## Performance budget
+
+LCP <2.0s mid-range mobile · The Vanishing 60fps on iPhone 13/Pixel 6 baseline · first-screen JS <200KB.
+
+## When unsure
+
+Surface it. Don't fabricate. Saying *"DESIGN.md doesn't specify X — asking before generating"* is preferred over guessing.
+
+Pushing back on a brief that would violate DESIGN.md is part of the job. Cite the section, propose an alternative, ask for an exception if needed.
