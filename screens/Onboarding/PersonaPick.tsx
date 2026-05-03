@@ -2,17 +2,31 @@
  * @register Sanctuary
  * @design-ref DESIGN.md §1.5, §10 (Onboarding)
  */
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { useState, type CSSProperties } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
+import { useFirstWeekStore, type Persona } from '@/lib/firstWeek';
 
-const personas = ['work', 'going out', 'weekend'] as const;
+const personas: Persona[] = ['work', 'going out', 'weekend'];
 
 export function PersonaPick() {
-  const [selectedPersona, setSelectedPersona] = useState<(typeof personas)[number]>('work');
+  const savedPersona = useFirstWeekStore((state) => state.persona);
+  const requestFirstSignature = useFirstWeekStore((state) => state.requestFirstSignature);
+  const setPersona = useFirstWeekStore((state) => state.setPersona);
+  const [selectedPersona, setSelectedPersona] = useState<Persona>(savedPersona);
+
+  function handlePersonaSelect(persona: Persona) {
+    setSelectedPersona(persona);
+    setPersona(persona);
+  }
+
+  function handleBegin() {
+    setPersona(selectedPersona);
+    void requestFirstSignature();
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -31,7 +45,7 @@ export function PersonaPick() {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: isSelected }}
                 key={persona}
-                onPress={() => setSelectedPersona(persona)}
+                onPress={() => handlePersonaSelect(persona)}
                 style={({ pressed }) => [
                   styles.option,
                   isSelected && styles.optionSelected,
@@ -44,17 +58,31 @@ export function PersonaPick() {
           })}
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/onboarding/first-signature')}
-          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-        >
-          <Text style={styles.ctaLabel}>begin →</Text>
-        </Pressable>
+        {Platform.OS === 'web' ? (
+          <a href="/onboarding/first-signature" onClick={handleBegin} style={webCtaStyle}>
+            <Text style={styles.ctaLabel}>begin →</Text>
+          </a>
+        ) : (
+          <Link href="/onboarding/first-signature" onPress={handleBegin} asChild>
+            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}>
+              <Text style={styles.ctaLabel}>begin →</Text>
+            </Pressable>
+          </Link>
+        )}
       </View>
     </SafeAreaView>
   );
 }
+
+const webCtaStyle: CSSProperties = {
+  minHeight: sizing.tapTarget,
+  alignSelf: 'flex-start',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: colors.ink,
+  textDecoration: 'none',
+};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -96,7 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderColor: colors.ink,
     borderRadius: radius.xs,
-    borderWidth: 0.5,
+    borderWidth: sizing.hairline,
     backgroundColor: colors.paper,
     paddingHorizontal: spacing[5],
     paddingVertical: spacing[4],

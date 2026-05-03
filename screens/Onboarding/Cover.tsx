@@ -2,8 +2,8 @@
  * @register Magazine
  * @design-ref DESIGN.md §1.5, §10 (Onboarding), §12
  */
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
@@ -13,13 +13,9 @@ export function Cover() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.stage}>
         <Text style={styles.title}>this week.</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/onboarding/starter-pack')}
-          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-        >
-          <Text style={styles.ctaLabel}>Begin.</Text>
-        </Pressable>
+        <Link accessibilityRole="button" href="/onboarding/starter-pack" style={[styles.cta, styles.ctaLabel]}>
+          Begin.
+        </Link>
       </View>
     </SafeAreaView>
   );
@@ -57,9 +53,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.paper,
     paddingHorizontal: spacing[5],
-  },
-  ctaPressed: {
-    opacity: 0.82,
   },
   ctaLabel: {
     color: colors.void,

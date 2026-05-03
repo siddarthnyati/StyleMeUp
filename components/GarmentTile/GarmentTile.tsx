@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
 
-export type GarmentKind = 'tee' | 'oxford' | 'denim' | 'sneaker' | 'jacket' | 'trouser' | 'skirt' | 'cap';
+export type GarmentKind = 'tee' | 'oxford' | 'denim' | 'sneaker' | 'boot' | 'jacket' | 'trouser' | 'skirt' | 'cap';
 
 type GarmentTileProps = {
   label: string;
@@ -112,6 +112,10 @@ const silhouetteStyles = StyleSheet.create({
     width: sizing.garment.sneaker.width,
     height: sizing.garment.sneaker.height,
     borderRadius: radius.xs,
+  },
+  boot: {
+    width: sizing.garment.boot.width,
+    height: sizing.garment.boot.height,
   },
   jacket: {
     width: sizing.garment.jacket.width,
