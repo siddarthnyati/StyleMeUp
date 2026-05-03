@@ -1,0 +1,5 @@
+{
+  "_comment": "Registry of all published Magazine issues. Used by the magazine-issue skill for reuse-detection (DESIGN.md §1.5 + skill cost guards). Each entry stores the trend, embedding seed, publish date, and asset paths so the skill can detect close matches before regenerating. Append-only; never delete entries even when issues expire.",
+  "_schema_version": "1.0",
+  "issues": []
+}
