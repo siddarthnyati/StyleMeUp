@@ -570,7 +570,7 @@ export function StarterPackExplorer({
       </ScrollView>
 
       <View style={styles.footer}>
-        <View>
+        <View style={styles.footerSummary}>
           <Text style={styles.footerCount}>{effectiveSelectedSet.size} marked.</Text>
           <Text style={styles.footerMeta}>
             {isFoundationReady ? 'enough to begin.' : `${FOUNDATION_MINIMUM_TOTAL - selectedCount} before receipt.`}
@@ -1079,10 +1079,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    rowGap: spacing[2],
     borderColor: colors.smoke[200],
     borderTopWidth: sizing.hairline,
     backgroundColor: colors.paper,
+    paddingVertical: spacing[3],
     paddingHorizontal: spacing[5],
+  },
+  footerSummary: {
+    flexShrink: 1,
+    paddingRight: spacing[4],
   },
   footerCount: {
     color: colors.ink,
@@ -1102,6 +1109,7 @@ const styles = StyleSheet.create({
   },
   cta: {
     minHeight: sizing.tapTarget,
+    flexShrink: 0,
     justifyContent: 'center',
     paddingHorizontal: spacing[4],
   },
@@ -1199,6 +1207,7 @@ function getWebCtaStyle(): CSSProperties {
   return {
     minHeight: sizing.tapTarget,
     display: 'flex',
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     paddingInline: spacing[4],

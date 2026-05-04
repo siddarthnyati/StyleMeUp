@@ -194,13 +194,16 @@ const styles = StyleSheet.create({
   },
   path: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing[3],
     borderColor: colors.smoke[200],
     borderWidth: sizing.hairline,
     backgroundColor: colors.bone,
     padding: spacing[3],
   },
   milestone: {
+    minWidth: 88,
+    flexGrow: 1,
     alignItems: 'center',
     gap: spacing[2],
   },
@@ -303,7 +306,8 @@ const styles = StyleSheet.create({
   },
   secondaryActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing[3],
   },
   textAction: {
     minHeight: sizing.tapTarget,

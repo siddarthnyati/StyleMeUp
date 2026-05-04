@@ -1,7 +1,7 @@
 # StyleMeUp Model Handoff
 
 Status: living context for Codex, Gemini, Claude, or any other model continuing the work.
-Last updated: 2026-05-04 02:03 PM ET
+Last updated: 2026-05-04 02:38 PM ET
 
 ## Product Frame
 
@@ -32,6 +32,7 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 - First-week state lives in `lib/firstWeek.ts` and persists through Zustand/MMKV/localStorage.
 - Starter pack UI lives in `components/StarterPack/StarterPackExplorer.tsx`.
 - Onboarding route order is currently cover → identity pick → starter pack → foundation receipt → persona pick → first signature → capture prompt → Closet / Discover.
+- A new visible-browser QA pass is in progress. Shared navigation and narrow-width wrapping improved, but a shared web framing issue is still open.
 
 ## Major Decisions So Far
 
@@ -63,6 +64,7 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 - `StarterPackExplorer` exports starter item data, shape renderers, category helpers, and URL parsing helpers.
 - Web category and item cards use native `<a>` elements for reliability.
 - Native category and item cards use `Pressable`.
+- `BottomNavigation` now keeps full labels visible and uses a small active marker instead of single-letter markers.
 - `FoundationReceipt` reads `selected` from route params and writes it to first-week state.
 - `requestFirstSignature` in `lib/firstWeek.ts` calls `EXPO_PUBLIC_STYLEMEUP_LLM_ENDPOINT` when configured; otherwise it falls back to deterministic local templates.
 - The first-signature endpoint receives `audienceIdentity`, `persona`, `starterSelections`, and structured `starterPieces`. It can return a top-level look, `{ look }`, or `{ firstSignature }`.
@@ -112,6 +114,11 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
   - capture preface, camera surface, result, and save-to-Closet route all work on web.
   - Closet receives the captured piece state and shows `one piece is real now.`
   - Discover renders Vol. 18 corduroy and the cover opens `/discover/vol-18-corduroy`.
+- New partial QA result from the current visible-browser pass:
+  - bottom navigation labels are now readable across screens
+  - Closet milestone/actions and starter footer wrap more gracefully on narrow widths
+  - cover CTA is less corner-cramped
+  - remaining issue: headless Chrome still shows bottom whitespace on the cover and slight left-edge offset / right-edge clipping on some screens, which points to a shared web layout/framing bug
 
 ## Immediate Next Checks
 

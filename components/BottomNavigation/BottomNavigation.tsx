@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { colors, sizing, spacing, type } from '@/tokens';
+import { colors, radius, sizing, spacing, type } from '@/tokens';
 
 type Destination = 'discover' | 'closet' | 'capture' | 'looks';
 
@@ -13,13 +13,12 @@ type BottomNavigationProps = {
 const destinations: {
   key: Destination;
   label: string;
-  marker: string;
   path: '/discover' | '/closet' | '/capture' | '/looks';
 }[] = [
-  { key: 'discover', label: 'Discover', marker: 'D', path: '/discover' },
-  { key: 'closet', label: 'Closet', marker: 'C', path: '/closet' },
-  { key: 'capture', label: 'Capture', marker: '●', path: '/capture' },
-  { key: 'looks', label: 'Looks', marker: 'L', path: '/looks' },
+  { key: 'discover', label: 'Discover', path: '/discover' },
+  { key: 'closet', label: 'Closet', path: '/closet' },
+  { key: 'capture', label: 'Capture', path: '/capture' },
+  { key: 'looks', label: 'Looks', path: '/looks' },
 ];
 
 export function BottomNavigation({ active, register }: BottomNavigationProps) {
@@ -42,18 +41,22 @@ export function BottomNavigation({ active, register }: BottomNavigationProps) {
               pressed && styles.itemPressed,
             ]}
           >
+            <View
+              style={[
+                styles.markerPill,
+                isMagazine && styles.markerPillMagazine,
+                destination.key === 'capture' && styles.captureMarker,
+                isActive && styles.markerPillActive,
+                isMagazine && isActive && styles.markerPillActiveMagazine,
+              ]}
+            />
             <Text
               style={[
-                styles.marker,
-                isMagazine && styles.markerMagazine,
-                destination.key === 'capture' && styles.captureMarker,
-                isActive && styles.markerActive,
-                isMagazine && isActive && styles.markerActiveMagazine,
+                styles.label,
+                isMagazine && styles.labelMagazine,
+                isActive ? styles.labelActive : styles.labelInactive,
               ]}
             >
-              {destination.marker}
-            </Text>
-            <Text style={[styles.label, isMagazine && styles.labelMagazine, !isActive && styles.labelInactive]}>
               {destination.label}
             </Text>
           </Pressable>
@@ -79,7 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.void,
   },
   item: {
-    minWidth: sizing.tapTarget,
+    flex: 1,
     minHeight: sizing.tapTarget,
     alignItems: 'center',
     justifyContent: 'center',
@@ -91,26 +94,26 @@ const styles = StyleSheet.create({
   itemPressed: {
     opacity: 0.64,
   },
-  marker: {
-    color: colors.smoke[400],
-    fontFamily: type.families.body,
-    fontSize: type.label.size,
-    fontWeight: type.label.weight,
-    lineHeight: type.label.lineHeight,
+  markerPill: {
+    width: 18,
+    height: 3,
+    borderRadius: radius.pill,
+    backgroundColor: colors.smoke[300],
   },
-  markerMagazine: {
-    color: colors.smoke[300],
+  markerPillMagazine: {
+    backgroundColor: colors.smoke[500],
   },
-  markerActive: {
-    color: colors.ink,
+  markerPillActive: {
+    backgroundColor: colors.ink,
   },
-  markerActiveMagazine: {
-    color: colors.paper,
+  markerPillActiveMagazine: {
+    backgroundColor: colors.paper,
   },
   captureMarker: {
-    color: colors.power,
-    fontSize: type.headlineMd.size,
-    lineHeight: type.headlineMd.lineHeight,
+    width: 12,
+    height: 12,
+    borderRadius: radius.pill,
+    backgroundColor: colors.power,
   },
   label: {
     color: colors.ink,
@@ -123,7 +126,10 @@ const styles = StyleSheet.create({
   labelMagazine: {
     color: colors.paper,
   },
+  labelActive: {
+    opacity: 1,
+  },
   labelInactive: {
-    opacity: 0,
+    opacity: 0.58,
   },
 });

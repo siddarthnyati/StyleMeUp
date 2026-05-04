@@ -44,10 +44,10 @@ const styles = StyleSheet.create({
   },
   cta: {
     position: 'absolute',
-    right: spacing[5],
-    bottom: spacing[6],
+    right: spacing[6],
+    bottom: spacing[7],
     minHeight: sizing.tapTarget,
-    minWidth: 96,
+    minWidth: 112,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,

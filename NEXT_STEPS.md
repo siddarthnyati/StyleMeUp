@@ -1,6 +1,6 @@
 # StyleMeUp Next Steps
 
-Last updated: 2026-05-04 02:03 PM ET
+Last updated: 2026-05-04 02:38 PM ET
 
 ## Current status
 
@@ -8,6 +8,21 @@ StyleMeUp has a stable first-week product spine in the current Expo app and a do
 
 ## Completed since last update
 
+- Started the first visible-browser QA pass for Track A on the live Expo web app.
+- Tightened shared app chrome after the first QA sweep:
+  - rebuilt the bottom navigation to use full labels with a cleaner active marker instead of single-letter initials
+  - let Closet milestone rows and secondary actions wrap instead of clipping on narrow widths
+  - let the starter-pack footer wrap cleanly so the progress summary and `continue` CTA can coexist on mobile widths
+  - nudged the cover CTA further inboard so it does not feel pinned to the corner
+- Verified the updated app with another headless Chrome pass on:
+  - cover
+  - starter pack
+  - Closet
+  - Discover
+- Identified a remaining viewport framing issue on web:
+  - a white band still appears below the cover
+  - several screens still show slight left-edge offset / right-edge clipping in headless Chrome
+  - this likely lives in the shared web layout or safe-area framing rather than a single screen
 - Stabilized the first-week onboarding checkpoint in the app:
   - identity pick
   - starter pack
@@ -35,7 +50,8 @@ Close the current app loop so the first-week experience feels deliberate, reliab
 
 Active focus:
 
-- run visible-browser QA for pointer feel, spacing, and route continuity
+- finish the shared web viewport/layout fix before doing deeper copy and motion polish
+- continue visible-browser QA for pointer feel, spacing, and route continuity
 - polish Discover-to-Closet usefulness, especially `you have the base.` and `build from yours`
 - refine first-signature, capture, and Closet copy/motion consistency against `DESIGN.md`
 - verify persistence and refresh safety for:
@@ -66,19 +82,22 @@ Active focus:
 
 ## Next steps
 
-1. Run a visible-browser pass on the app and record any remaining UX/debugging gaps that block the first-week checkpoint.
-2. Close the app checkpoint with a short list of remaining product fixes instead of opening new surfaces.
-3. Create the separate Magazine agent repo scaffold:
+1. Fix the shared web viewport/layout issue that is still causing bottom whitespace on the cover and slight horizontal framing/clipping on some screens.
+2. Continue the visible-browser QA pass once the shared layout issue is resolved, then record the remaining UI polish list by screen.
+3. Verify persistence and refresh safety for the first-week state keys on web.
+4. Close the app checkpoint with a short list of remaining product fixes instead of opening new surfaces.
+5. Create the separate Magazine agent repo scaffold:
    - TypeScript project
    - orchestrator entrypoint
    - executor interfaces
    - Supabase run-record shape
    - local draft workflow
-4. Define the first portable Magazine issue manifest that the app can consume later without knowing orchestration internals.
-5. Keep Discover on local typed issue content until the agent repo can emit a stable manifest and approval-ready draft.
+6. Define the first portable Magazine issue manifest that the app can consume later without knowing orchestration internals.
+7. Keep Discover on local typed issue content until the agent repo can emit a stable manifest and approval-ready draft.
 
 ## Blockers and open decisions
 
+- Shared web layout framing is still imperfect in headless Chrome, so the current visible-browser QA pass is not fully closed yet.
 - Decide whether `audienceIdentity` should branch starter inventory soon or remain tone-only for now.
 - Connect the real `EXPO_PUBLIC_STYLEMEUP_LLM_ENDPOINT` only after the current app checkpoint is stable.
 - Add real Vol. 18 assets when they are generated and uploaded; current Discover visuals are still placeholder/editorial silhouettes.

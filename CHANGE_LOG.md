@@ -2,6 +2,33 @@
 
 Historical note: entries below 2026-05-04 02:03 PM ET are backfilled from git history and `MODEL_HANDOFF.md`. They capture milestone-level changes and decisions, not every small edit.
 
+## 2026-05-04 02:38 PM ET
+
+- Changed:
+  - Started the first visible-browser QA pass on the live Expo web app for the current app checkpoint.
+  - Updated the shared bottom navigation so all destinations keep readable labels and use a cleaner active-state marker.
+  - Updated Closet progress/actions to wrap more gracefully on narrow mobile widths.
+  - Updated the starter-pack footer so the selection summary and `continue` CTA can coexist without clipping on smaller widths.
+  - Nudged the cover CTA inward for a calmer first-screen composition.
+  - Logged a remaining shared web layout issue after verification:
+    - white band below the cover
+    - slight left-edge offset / right-edge clipping on some screens in headless Chrome
+- Why:
+  - The first-week loop was structurally stable, but the UI still had shared chrome problems that made the product feel more prototype-like than intentional.
+  - Fixing shared navigation and footer behavior first gives the biggest UX return before spending time on copy and motion polish.
+  - The remaining framing issue needs to be tracked explicitly because it affects multiple screens and should be treated as a shared-layout problem, not isolated screen bugs.
+- Affected:
+  - `components/BottomNavigation/BottomNavigation.tsx`
+  - `components/StarterPack/StarterPackExplorer.tsx`
+  - `screens/Closet/Closet.tsx`
+  - `screens/Onboarding/Cover.tsx`
+  - `app/_layout.tsx`
+  - `NEXT_STEPS.md`
+- Next:
+  - resolve the shared web framing issue in the app shell
+  - rerun the visible-browser QA pass after the shell fix
+  - then move on to persistence checks and screen-level polish
+
 ## 2026-05-04 02:03 PM ET
 
 - Changed:
