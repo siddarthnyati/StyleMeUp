@@ -2,9 +2,9 @@
  * @register Sanctuary
  * @design-ref DESIGN.md §1.5, §10 (Closet), §12
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
@@ -16,9 +16,11 @@ import { getTodayLookForPersona, useFirstWeekStore, type Persona } from '@/lib/f
 const personaOrder: Persona[] = ['work', 'going out', 'weekend'];
 
 export function Closet() {
+  const searchParams = useLocalSearchParams<{ captured?: string }>();
   const capturedPieces = useFirstWeekStore((state) => state.capturedPieces);
   const firstSignatureSaved = useFirstWeekStore((state) => state.firstSignatureSaved);
   const persona = useFirstWeekStore((state) => state.persona);
+  const saveCapturedPiece = useFirstWeekStore((state) => state.saveCapturedPiece);
   const saveLook = useFirstWeekStore((state) => state.saveLook);
   const setLastDressingRoomDate = useFirstWeekStore((state) => state.setLastDressingRoomDate);
   const starterSelections = useFirstWeekStore((state) => state.starterSelections);
@@ -26,7 +28,8 @@ export function Closet() {
   const [activePersona, setActivePersona] = useState<Persona>(persona);
   const [todayState, setTodayState] = useState<'ready' | 'saved' | 'passed'>('ready');
   const todayLook = getTodayLookForPersona(activePersona);
-  const hasCapturedPiece = capturedPieces.length > 0;
+  const routeCaptured = searchParams.captured === '1';
+  const hasCapturedPiece = capturedPieces.length > 0 || routeCaptured;
   const headerCopy = hasCapturedPiece
     ? 'one piece is real now.'
     : firstSignatureSaved
@@ -37,6 +40,12 @@ export function Closet() {
     { complete: hasCapturedPiece, label: 'one piece' },
     { complete: firstSignatureSaved, label: 'first look' },
   ];
+
+  useEffect(() => {
+    if (routeCaptured && capturedPieces.length === 0) {
+      saveCapturedPiece();
+    }
+  }, [capturedPieces.length, routeCaptured, saveCapturedPiece]);
 
   function handleWearThis() {
     saveLook(todayLook);

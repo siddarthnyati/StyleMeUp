@@ -2,9 +2,9 @@
  * @register Sanctuary
  * @design-ref DESIGN.md §1.5, §10 (Capture), §12
  */
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
@@ -15,11 +15,26 @@ import { useFirstWeekStore } from '@/lib/firstWeek';
 type CaptureStage = 'preface' | 'viewfinder' | 'loading' | 'result';
 
 const loadingLines = ['reading the piece...', 'finding the weight...', 'cutting the silhouette...'] as const;
+const routeStages: CaptureStage[] = ['preface', 'viewfinder', 'loading', 'result'];
+
+function getRouteStage(value: string | string[] | undefined): CaptureStage | undefined {
+  const stage = Array.isArray(value) ? value[0] : value;
+
+  return routeStages.includes(stage as CaptureStage) ? (stage as CaptureStage) : undefined;
+}
 
 export function Capture() {
+  const searchParams = useLocalSearchParams<{ stage?: string }>();
+  const routeStage = getRouteStage(searchParams.stage);
   const saveCapturedPiece = useFirstWeekStore((state) => state.saveCapturedPiece);
-  const [stage, setStage] = useState<CaptureStage>('preface');
+  const [stage, setStage] = useState<CaptureStage>(routeStage ?? 'preface');
   const [loadingIndex, setLoadingIndex] = useState(0);
+
+  useEffect(() => {
+    if (routeStage) {
+      setStage(routeStage);
+    }
+  }, [routeStage]);
 
   useEffect(() => {
     if (stage !== 'loading') {
@@ -54,13 +69,19 @@ export function Capture() {
               <Text style={styles.prefaceHeadline}>one piece.</Text>
               <Text style={styles.prefaceSubcaption}>start with the one nearest you.</Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setStage('viewfinder')}
-              style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
-            >
-              <Text style={styles.primaryActionLabel}>OPEN CAMERA</Text>
-            </Pressable>
+            {Platform.OS === 'web' ? (
+              <a href="/capture?stage=viewfinder" style={webPrimaryActionStyle}>
+                <Text style={styles.primaryActionLabel}>OPEN CAMERA</Text>
+              </a>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setStage('viewfinder')}
+                style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
+              >
+                <Text style={styles.primaryActionLabel}>OPEN CAMERA</Text>
+              </Pressable>
+            )}
           </View>
         ) : null}
 
@@ -81,14 +102,20 @@ export function Capture() {
             </View>
 
             <View style={styles.shutterWrap}>
-              <Pressable
-                accessibilityLabel="capture one piece"
-                accessibilityRole="button"
-                onPress={() => setStage('loading')}
-                style={({ pressed }) => [styles.shutterButton, pressed && styles.pressed]}
-              >
-                <View style={styles.shutter} />
-              </Pressable>
+              {Platform.OS === 'web' ? (
+                <a aria-label="capture one piece" href="/capture?stage=result" style={webShutterButtonStyle}>
+                  <View style={styles.shutter} />
+                </a>
+              ) : (
+                <Pressable
+                  accessibilityLabel="capture one piece"
+                  accessibilityRole="button"
+                  onPress={() => setStage('loading')}
+                  style={({ pressed }) => [styles.shutterButton, pressed && styles.pressed]}
+                >
+                  <View style={styles.shutter} />
+                </Pressable>
+              )}
             </View>
           </>
         ) : null}
@@ -121,13 +148,19 @@ export function Capture() {
             </View>
 
             <View style={styles.resultActions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleSave}
-                style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
-              >
-                <Text style={styles.primaryActionLabel}>SAVE TO CLOSET</Text>
-              </Pressable>
+              {Platform.OS === 'web' ? (
+                <a href="/closet?captured=1" style={webPrimaryActionStyle}>
+                  <Text style={styles.primaryActionLabel}>SAVE TO CLOSET</Text>
+                </a>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleSave}
+                  style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}
+                >
+                  <Text style={styles.primaryActionLabel}>SAVE TO CLOSET</Text>
+                </Pressable>
+              )}
               <Link href="/closet" asChild>
                 <Pressable accessibilityRole="button" style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}>
                   <Text style={styles.textActionLabel}>not now</Text>
@@ -141,6 +174,26 @@ export function Capture() {
     </SafeAreaView>
   );
 }
+
+const webPrimaryActionStyle: CSSProperties = {
+  minHeight: sizing.tapTarget,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: radius.sm,
+  backgroundColor: colors.ink,
+  paddingInline: spacing[5],
+  display: 'flex',
+  textDecoration: 'none',
+};
+
+const webShutterButtonStyle: CSSProperties = {
+  width: sizing.tapTarget,
+  height: sizing.tapTarget,
+  alignItems: 'center',
+  justifyContent: 'center',
+  display: 'flex',
+  textDecoration: 'none',
+};
 
 const styles = StyleSheet.create({
   safeArea: {

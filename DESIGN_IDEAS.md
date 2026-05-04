@@ -1,7 +1,7 @@
 # StyleMeUp Design Philosophy And Ideas
 
 Status: living product/design notes.
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Source Context
 
@@ -122,7 +122,7 @@ Current foundation categories:
 
 The first grid should be calm and balanced. Six categories give a useful wardrobe spread and a stable visual rhythm. The item grid appears only after a category is chosen so the tap has an obvious outcome.
 
-Important next revision: audience identity should come before the category grid. The sequence should feel like a private fitting, not a demographic form:
+Implemented revision: audience identity now comes before the category grid. The sequence should feel like a private fitting, not a demographic form:
 
 1. ask whether the user is dressing from a man, woman, or non-binary foundation
 2. show the starter foundation grid after that choice
@@ -132,12 +132,20 @@ Important next revision: audience identity should come before the category grid.
 
 Minimum foundation direction:
 
-- require at least four t-shirts
-- require at least four jeans or trouser equivalents
-- require at least four shoes or boots across footwear
-- require at least four core pieces in any remaining recommendation-critical category
+- current V1 gate: require 16 total selected foundation pieces before the receipt
+- return the user to the main category grid if they have only marked one category
+- show the quiet note `the foundation needs a little more weight.`
+- keep the older four-per-core-category idea as a possible stricter V2 recommendation-quality gate
 
 The reason is practical, not gamified: the system needs enough real inputs to combine outfits without feeling thin or repetitive. Do not frame this as a streak, badge, or checklist challenge. Frame it as `the foundation needs a little more weight.`
+
+Current baseline behavior:
+
+- web uses URL-backed category and item selection so clicks behave like normal links
+- selected foundation IDs travel from starter pack to receipt to persona to first signature
+- selecting too few pieces returns to the department grid instead of advancing
+- the first signature uses the selected foundation rather than seeded demo defaults
+- visual polish is intentionally V2; the current goal is reliable flow and credible product logic
 
 The visual language should remain austere:
 
@@ -152,7 +160,7 @@ The visual language should remain austere:
 Personalization must be honest. Only reflect:
 
 - starter selections
-- men/women choice
+- identity choice: man, woman, or non-binary
 - persona choice
 - saved looks
 - captured pieces
@@ -177,6 +185,15 @@ The first signature should not appear until the foundation has enough material t
 
 Persona pick must be truly selectable. `work`, `going out`, and `weekend` are one-tap signals that should alter the first signature composition. If generation fails or no LLM endpoint is configured, deterministic fallback is allowed, but it should still reflect the selected persona and starter foundation.
 
+Current fallback direction:
+
+- `work` should prefer structured outerwear, lighter shirts, dark denim, and grounded shoes
+- `going out` should prefer black, charcoal, navy, burgundy, and dark footwear when selected
+- `weekend` should prefer softer cotton, washed denim, and low easy shoes
+- this is a bridge until the real endpoint is connected, not a replacement for the recommendation model
+
+The model endpoint should receive the user-selected foundation and return one strong first recommendation first. Later variants can add casual and office alternates, then daily/weekly looks informed by weather.
+
 ## Discover / Magazine Direction
 
 Discover is the Magazine register and should never feel blank. If the real Magazine pipeline is not connected, the screen still needs a credible editorial state using existing issue content from `issues/`, especially `vol-18-corduroy.md`.
@@ -188,9 +205,15 @@ Discover cards should have obvious click/tap behavior:
 - `build from yours` routes into a Sanctuary builder
 - no fake content, no placeholder stock, no empty feed
 
+Current implementation note:
+
+- `issues/index.json` is empty, so V1 Discover uses typed local content derived from `issues/vol-18-corduroy.md`.
+- Full assets are not present in `assets/`, so the current visual treatment is editorial silhouettes plus real issue copy.
+- The cover, trend cards, and curator cards are clickable and have detail pages.
+
 ## Future Ideas
 
-- Branch starter inventory by men/women without making the choice feel loaded.
+- Branch starter inventory by identity without making the choice feel loaded.
 - Add seasonal filters after the first successful look, not during onboarding.
 - Let one anchor piece create three variants: work, going out, weekend.
 - Build closet rooms later: work rail, weekend rail, evening rail.

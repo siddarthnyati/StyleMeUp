@@ -13,7 +13,7 @@ export function Cover() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.stage}>
         <Text style={styles.title}>this week.</Text>
-        <Link accessibilityRole="button" href="/onboarding/starter-pack" style={[styles.cta, styles.ctaLabel]}>
+        <Link accessibilityRole="button" href="/onboarding/identity" style={[styles.cta, styles.ctaLabel]}>
           Begin.
         </Link>
       </View>

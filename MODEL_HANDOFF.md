@@ -1,7 +1,7 @@
 # StyleMeUp Model Handoff
 
 Status: living context for Codex, Gemini, Claude, or any other model continuing the work.
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Product Frame
 
@@ -21,21 +21,32 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 - Expo managed workflow with Expo Router, TypeScript strict mode, Zustand, MMKV, Skia, Reanimated, and React Query.
 - First-week state lives in `lib/firstWeek.ts` and persists through Zustand/MMKV/localStorage.
 - Starter pack UI lives in `components/StarterPack/StarterPackExplorer.tsx`.
-- Onboarding route order is currently cover → starter pack → foundation receipt → persona pick → first signature.
+- Onboarding route order is currently cover → identity pick → starter pack → foundation receipt → persona pick → first signature → capture prompt → Closet / Discover.
 
 ## Major Decisions So Far
 
 - The app uses two registers:
   - Magazine: black `void`, cinematic, monumental uppercase, first-signature peak.
   - Sanctuary: white `paper`, private, lowercase italic headlines, onboarding and closet.
+- Magazine Weekly agent orchestration is now specified as docs-first:
+  - `MAGAZINE_AGENT_SPEC.md` defines the weekly Discover production workflow.
+  - `AI_ORCHESTRATION.md` defines the general orchestrator/executor pattern.
+  - Vercel AI is the chosen orchestration layer.
+  - Supabase remains the memory, storage, issue archive, and publish-state layer.
+  - The orchestrator is deterministic TypeScript, while executors are narrow model calls with structured outputs.
+  - Executors do not talk to each other; they pass records through the orchestrator and stop for human approval before publishing.
 - Starter pack became a two-level Sanctuary flow:
   - first level: 2x3 foundation grid
   - second level: focused item grid for the selected category
 - Starter categories are now `t-shirts`, `jeans`, `shoes`, `accessories`, `jackets`, and `boots`.
-- A quiet `men / women` onboarding choice exists above starter categories. It currently stores route state but does not yet branch inventory by audience.
+- A quiet identity pick now happens before starter categories: `man`, `woman`, `non-binary`. It stores `audienceIdentity` but does not yet branch inventory by identity.
 - The starter pack uses URL-backed interaction on web so clicks survive React Native Web pressability quirks.
 - URL-backed starter selections are now synced into Zustand when the URL selection changes.
-- `begin →` on persona pick now starts a first-signature request seam before routing to the first signature.
+- `begin →` on persona pick now starts a first-signature request before routing to the first signature, and the deterministic fallback uses selected foundation pieces where possible.
+- Foundation receipt, persona pick, and first signature now carry `selected` through the URL so web refreshes and link clicks do not lose the user foundation.
+- The first-signature fallback ranks selected pieces by persona tone. For example, `going out` prefers black, charcoal, navy, and dark footwear from the actual selected foundation before lighter basics.
+- Foundation receipt is gated behind 16 total selected starter pieces for this pass.
+- Discover uses typed local content derived from `issues/vol-18-corduroy.md` because `issues/index.json` is empty and no Magazine assets are present yet.
 
 ## Current Implementation Notes
 
@@ -44,6 +55,11 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 - Native category and item cards use `Pressable`.
 - `FoundationReceipt` reads `selected` from route params and writes it to first-week state.
 - `requestFirstSignature` in `lib/firstWeek.ts` calls `EXPO_PUBLIC_STYLEMEUP_LLM_ENDPOINT` when configured; otherwise it falls back to deterministic local templates.
+- The first-signature endpoint receives `audienceIdentity`, `persona`, `starterSelections`, and structured `starterPieces`. It can return a top-level look, `{ look }`, or `{ firstSignature }`.
+- Zustand persist is versioned at `2`; migration clears the exact old four-piece demo seed so existing browser sessions do not keep mystery defaults.
+- Web first-signature save uses `?saved=1`, then reveals `add one real piece →`.
+- Capture keeps the editorial loading sequence on native. On web, the shutter routes directly to `?stage=result` for baseline click reliability; V2 can restore route-backed editorial timing once Expo web effects are stable there.
+- Closet consumes `?captured=1` and persists the placeholder captured piece into first-week state.
 - No user-facing copy should mention “AI”, “magic”, “smart”, “intelligent”, or any banned §4 wording.
 
 ## Recent User Feedback
@@ -61,43 +77,39 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 - After audience identity is selected, then show the starter foundation category grid.
 - Selecting a few t-shirts and tapping `continue →` should not jump straight to the receipt if the closet foundation is incomplete.
 - The app should route back to the main foundation grid until the user has enough in each required category.
-- Initial requirement direction: at least four pieces in each core category before generation: t-shirts, jeans, shoes, and boots. This gives the LLM enough material to permutate and combine.
-- Persona pick currently needs reliability work: work / going out / weekend should be selectable, and `begin →` should use the selected persona.
-- First signature currently shows placeholder/deterministic pieces like camel jacket, blue oxford, indigo denim. This is acceptable as fallback but not the final generated experience.
-- Discover currently feels empty / not clickable enough. Magazine module status needs review before treating Discover as done.
+- Current implemented requirement: 16 total selected starter pieces before the receipt and first-signature path. Earlier discussion explored four per core category, but the implemented plan chose the flexible 16-piece gate for this pass.
+- Persona pick is now web-clickable and preserves the selected persona into first signature.
+- First signature still uses deterministic fallback when no endpoint is configured, but it now uses selected foundation pieces and persona tone preferences rather than mystery defaults.
+- Discover now renders real Vol. 18 corduroy Magazine copy, clickable cover/card links, detail pages, and `you have the base.` match actions when starter selections overlap.
 
 ## Verification Snapshot
 
-- Last known good checks after starter flow changes:
-  - `npm run lint`
-  - `npx tsc --noEmit`
-- Browser verification on `http://localhost:8081/onboarding/starter-pack`:
-  - foundation grid renders 2x3
-  - t-shirts opens focused t-shirt grid
-  - item click updates selected count
-  - foundation back link returns to foundation grid
-  - jackets opens focused jacket grid
+- Last known good checks after the onboarding, capture, and Discover stabilization pass:
+  - `npm run lint` passes with one generated Expo warning in `.expo/types/router.d.ts`.
+  - `npx tsc --noEmit` passes.
+  - `git diff --check` passes.
+- Full headless Chrome CDP verification on `http://localhost:8081` from clean `localStorage`:
+  - `/` `Begin.` routes to `/onboarding/identity`.
+  - identity renders `man`, `woman`, `non-binary`; `man` routes to starter pack.
+  - starter pack renders all six categories: `t-shirts`, `jeans`, `shoes`, `boots`, `jackets`, `accessories`.
+  - every category opens a focused item grid and selected item links persist through the URL/store handoff.
+  - selecting only t-shirts and tapping `continue →` returns to the main starter grid with `the foundation needs a little more weight.`
+  - selecting 16 total pieces opens `your foundation.`
+  - `show the first →` routes to persona pick while preserving the selected foundation.
+  - `going out` is selectable and `begin →` routes to first signature.
+  - first signature uses selected pieces: `black tee`, `raw indigo jean`, `black chelsea`.
+  - `SAVE TO CLOSET` reveals `saved.` and `add one real piece →`.
+  - capture preface, camera surface, result, and save-to-Closet route all work on web.
+  - Closet receives the captured piece state and shows `one piece is real now.`
+  - Discover renders Vol. 18 corduroy and the cover opens `/discover/vol-18-corduroy`.
 
 ## Immediate Next Checks
 
-- Re-test starter item click after URL-to-store sync.
-- Re-test persona pick:
-  - `work`, `going out`, `weekend` select correctly
-  - `begin →` routes to first signature
-  - `firstSignatureRequestStatus` changes from `idle` to `reading` then `ready` or `failed`
-- Decide whether `men / women` should branch inventory now or remain a taste/audience seed for the first signature request.
-- Redesign onboarding order:
-  - cover
-  - identity pick
-  - starter foundation category grid
-  - category item grids
-  - foundation completeness check
-  - receipt only after minimum category coverage
-  - persona pick
-  - first signature generation
-- Add non-binary identity option without making the copy feel clinical or performative.
-- Enforce the minimum foundation rule in state before allowing first-signature generation.
-- Audit Discover for real Magazine content, click targets, and non-empty editorial states.
+- Manual browser click testing is still useful in the visible browser for pointer feel and layout, but the baseline route/click flow is verified in headless Chrome.
+- Review `MAGAZINE_AGENT_SPEC.md` and `AI_ORCHESTRATION.md` before implementing any Vercel AI or Supabase workflow code.
+- Decide whether the identity pick should branch starter inventory or only seed future recommendation tone.
+- Connect the real LLM endpoint through `EXPO_PUBLIC_STYLEMEUP_LLM_ENDPOINT`; no key should be committed.
+- Add real Vol. 18 assets when generated/uploaded. Current Discover visuals are editorial silhouettes from real issue copy, not final Magazine imagery.
 
 
 

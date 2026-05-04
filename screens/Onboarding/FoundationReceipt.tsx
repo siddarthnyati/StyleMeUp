@@ -2,12 +2,17 @@
  * @register Sanctuary
  * @design-ref DESIGN.md §1.5, §10 (Onboarding), §12
  */
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
-import { getStarterCategoryCounts, getStarterSelectionFromSearch } from '@/components/StarterPack/StarterPackExplorer';
+import {
+  FOUNDATION_MINIMUM_TOTAL,
+  getStarterCategoryCounts,
+  getStarterSelectionFromSearch,
+} from '@/components/StarterPack/StarterPackExplorer';
 import { useFirstWeekStore } from '@/lib/firstWeek';
 
 export function FoundationReceipt() {
@@ -19,6 +24,13 @@ export function FoundationReceipt() {
   const receiptSelections = selectedFromSearch ?? starterSelections;
   const categoryCounts = getStarterCategoryCounts(receiptSelections).filter((category) => category.count > 0);
   const totalMarked = categoryCounts.reduce((total, category) => total + category.count, 0);
+  const personaHref = `/onboarding/persona-pick?selected=${encodeURIComponent(receiptSelections.join(','))}`;
+
+  useEffect(() => {
+    if (selectedFromSearch) {
+      setStarterSelections(selectedFromSearch);
+    }
+  }, [selectedFromSearch, setStarterSelections]);
 
   function handleContinue() {
     if (selectedFromSearch) {
@@ -26,6 +38,38 @@ export function FoundationReceipt() {
     }
 
     markFoundationReceiptSeen();
+  }
+
+  if (totalMarked < FOUNDATION_MINIMUM_TOTAL) {
+    const remaining = FOUNDATION_MINIMUM_TOTAL - totalMarked;
+
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.stage} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={styles.eyebrow}>foundation</Text>
+            <Text style={styles.headline}>not quite yet.</Text>
+            <Text style={styles.subcaption}>the first signature needs more of what you own.</Text>
+          </View>
+
+          <View style={styles.receipt} accessible accessibilityLabel={`${remaining} more pieces before the receipt`}>
+            <View style={styles.receiptHeader}>
+              <Text style={styles.receiptTitle}>{remaining} more.</Text>
+              <Text style={styles.receiptMeta}>the foundation needs a little more weight.</Text>
+            </View>
+          </View>
+
+          <Link
+            href={`/onboarding/starter-pack?selected=${encodeURIComponent(receiptSelections.join(','))}&needed=foundation`}
+            asChild
+          >
+            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}>
+              <Text style={styles.ctaLabel}>return to foundation →</Text>
+            </Pressable>
+          </Link>
+        </ScrollView>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -62,7 +106,7 @@ export function FoundationReceipt() {
           <Text style={styles.noteText}>the app begins with what is already yours.</Text>
         </View>
 
-        <Link href="/onboarding/persona-pick" onPress={handleContinue} asChild>
+        <Link href={personaHref as Href} onPress={handleContinue} asChild>
           <Pressable accessibilityRole="button" style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}>
             <Text style={styles.ctaLabel}>show the first →</Text>
           </Pressable>

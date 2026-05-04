@@ -8,70 +8,52 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, sizing, spacing, type } from '@/tokens';
 import { BottomNavigation } from '@/components/BottomNavigation/BottomNavigation';
-import { GarmentTile, type GarmentKind } from '@/components/GarmentTile/GarmentTile';
+import { GarmentTile } from '@/components/GarmentTile/GarmentTile';
 import { useFirstWeekStore } from '@/lib/firstWeek';
-
-const trendCards: {
-  baseSelectionIds: string[];
-  body: string;
-  eyebrow: string;
-  headline: string;
-  kind: GarmentKind;
-}[] = [
-  {
-    eyebrow: 'FOR THURSDAY',
-    headline: 'the wide wale.',
-    body: 'eight threads to the inch. coat-weight.',
-    kind: 'trouser',
-    baseSelectionIds: ['jean-rinsed', 'jean-washed', 'jean-cord', 'jean-raw'],
-  },
-  {
-    eyebrow: 'FOR THE OFFICE THAT IS NOT AN OFFICE',
-    headline: 'the chore cut.',
-    body: 'three pockets. one rule: keep it heavy.',
-    kind: 'jacket',
-    baseSelectionIds: ['tee-optic', 'tee-bone', 'jean-rinsed'],
-  },
-  {
-    eyebrow: 'FOR LATE LIGHT',
-    headline: 'the long skirt.',
-    body: 'dust-rose. ankle. nothing else needed.',
-    kind: 'skirt',
-    baseSelectionIds: ['tee-black', 'tee-burgundy', 'shoe-black-loafer'],
-  },
-  {
-    eyebrow: 'FINISH THE LOOK',
-    headline: 'the cap.',
-    body: 'charcoal, fine-wale, brass at the back.',
-    kind: 'cap',
-    baseSelectionIds: ['tee-heather', 'tee-charcoal', 'accessory-black-cap'],
-  },
-];
+import { magazineIssue, type MagazineSurface } from '@/lib/magazineIssue';
 
 export function Discover() {
   const capturedPieces = useFirstWeekStore((state) => state.capturedPieces);
   const starterSelections = useFirstWeekStore((state) => state.starterSelections);
   const selectedIdSet = new Set(starterSelections);
+  const cards = magazineIssue.surfaces.filter((surface) => surface.section !== 'cover');
+
+  function hasBaseForSurface(surface: MagazineSurface) {
+    return (
+      surface.baseSelectionIds.some((selectionId) => selectedIdSet.has(selectionId)) ||
+      capturedPieces.some((piece) => surface.body.includes(piece.label.split(' ')[0]))
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.cover}>
-          <Text style={styles.eyebrow}>VOL. 18 · THE RETURN</Text>
-          <Text style={styles.monumental}>LAST SEEN: 2013. RETURNING.</Text>
-          <Text style={styles.dek}>the eight-line wale,{'\n'}recut for a heavier hand.</Text>
-        </View>
+        <Link href={{ pathname: '/discover/[slug]', params: { slug: magazineIssue.cover.slug } }} asChild>
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.cover, pressed && styles.cardPressed]}
+          >
+            <Text style={styles.eyebrow}>{magazineIssue.cover.eyebrow}</Text>
+            <Text style={styles.monumental}>{magazineIssue.cover.headline}</Text>
+            <Text style={styles.dek}>{magazineIssue.cover.deck}</Text>
+          </Pressable>
+        </Link>
 
         <View style={styles.feed}>
-          {trendCards.map((card) => {
-            const hasBase =
-              card.baseSelectionIds.some((selectionId) => selectedIdSet.has(selectionId)) ||
-              capturedPieces.some((piece) => card.body.includes(piece.label.split(' ')[0]));
+          {cards.map((card) => {
+            const hasBase = hasBaseForSurface(card);
 
             return (
               <View key={card.headline} style={styles.card}>
-                <GarmentTile detail={card.eyebrow} kind={card.kind} label={card.headline} register="Magazine" />
-                <Text style={styles.cardBody}>{card.body}</Text>
+                <Link href={{ pathname: '/discover/[slug]', params: { slug: card.slug } }} asChild>
+                  <Pressable
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.cardAction, pressed && styles.cardPressed]}
+                  >
+                    <GarmentTile detail={card.eyebrow} kind={card.kind} label={card.headline} register="Magazine" />
+                    <Text style={styles.cardBody}>{card.body}</Text>
+                  </Pressable>
+                </Link>
                 {hasBase ? (
                   <View style={styles.matchBlock}>
                     <Text style={styles.matchText}>you have the base.</Text>
@@ -139,6 +121,12 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: spacing[3],
+  },
+  cardAction: {
+    gap: spacing[3],
+  },
+  cardPressed: {
+    opacity: 0.72,
   },
   cardBody: {
     color: colors.smoke[300],

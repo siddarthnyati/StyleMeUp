@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '@/tokens';
-import { initialStarterSelectionIds, StarterPackExplorer } from '@/components/StarterPack/StarterPackExplorer';
+import { StarterPackExplorer } from '@/components/StarterPack/StarterPackExplorer';
 import { useFirstWeekStore } from '@/lib/firstWeek';
 
 export function StarterPack() {
@@ -20,8 +20,7 @@ export function StarterPack() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StarterPackExplorer
-        continueHref="/onboarding/foundation-receipt"
-        initialSelectedIds={starterSelections.length > 0 ? starterSelections : initialStarterSelectionIds}
+        initialSelectedIds={starterSelections}
         onContinue={handleContinue}
         onSelectionsChange={setStarterSelections}
       />

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 
 import { colors, radius, sizing, spacing, type, wardrobeTones } from '@/tokens';
 import type { WardrobeTone } from '@/tokens/wardrobe';
 
-export type StarterAudience = 'men' | 'women';
 export type StarterCategoryKey = 'tshirts' | 'jeans' | 'shoes' | 'accessories' | 'boots' | 'jackets';
 export type StarterShape = 'tee' | 'jeans' | 'sneaker' | 'loafer' | 'boot' | 'cap' | 'belt' | 'bag' | 'jacket';
 export type StarterImageSize = 'hero' | 'preview' | 'variant' | 'closetHero' | 'closetRail';
@@ -26,11 +25,12 @@ export type StarterCategory = {
 };
 
 type StarterPackExplorerProps = {
-  continueHref?: Href;
   initialSelectedIds?: readonly string[];
   onContinue: (selectionIds: string[]) => void;
   onSelectionsChange?: (selectionIds: string[]) => void;
 };
+
+export const FOUNDATION_MINIMUM_TOTAL = 16;
 
 export const starterCategories: StarterCategory[] = [
   {
@@ -159,7 +159,7 @@ export const starterCategories: StarterCategory[] = [
 ];
 
 export const starterTotal = starterCategories.reduce((total, category) => total + category.variants.length, 0);
-export const initialStarterSelectionIds = ['tee-optic', 'jean-rinsed', 'shoe-white-court', 'boot-black-chelsea'] as const;
+export const initialStarterSelectionIds: readonly string[] = [];
 
 function renderStarterShape(shape: StarterShape, tone: WardrobeTone) {
   const toneStyle = toneStyles[tone];
@@ -287,13 +287,29 @@ export function getStarterCategoryCounts(selectionIds: readonly string[]) {
   }));
 }
 
-function getSearchString(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+export function getStarterVariantById(id: string) {
+  for (const category of starterCategories) {
+    const variant = category.variants.find((item) => item.id === id);
+
+    if (variant) {
+      return {
+        category,
+        variant,
+      };
+    }
+  }
+
+  return undefined;
 }
 
-function getAudienceFromSearch(value: string | string[] | undefined): StarterAudience {
-  const audience = getSearchString(value);
-  return audience === 'women' ? 'women' : 'men';
+export function getStarterVariantsByIds(selectionIds: readonly string[]) {
+  return selectionIds
+    .map((selectionId) => getStarterVariantById(selectionId))
+    .filter((entry): entry is { category: StarterCategory; variant: StarterVariant } => Boolean(entry));
+}
+
+function getSearchString(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function getCategoryFromSearch(value: string | string[] | undefined): StarterCategoryKey | undefined {
@@ -312,16 +328,17 @@ export function getStarterSelectionFromSearch(value: string | string[] | undefin
 }
 
 function getStarterPackHref({
-  audience,
   category,
+  needsFoundation,
   selectionIds,
 }: {
-  audience: StarterAudience;
   category?: StarterCategoryKey;
+  needsFoundation?: boolean;
   selectionIds: readonly string[];
 }) {
   const categoryParam = category ? `&category=${category}` : '';
-  return `/onboarding/starter-pack?audience=${audience}${categoryParam}&selected=${encodeURIComponent(selectionIds.join(','))}`;
+  const neededParam = needsFoundation ? '&needed=foundation' : '';
+  return `/onboarding/starter-pack?selected=${encodeURIComponent(selectionIds.join(','))}${categoryParam}${neededParam}`;
 }
 
 function getFoundationReceiptHref(selectionIds: readonly string[]) {
@@ -333,38 +350,39 @@ function toggleSelectionId(selectionIds: readonly string[], id: string) {
 }
 
 export function StarterPackExplorer({
-  continueHref,
   initialSelectedIds = initialStarterSelectionIds,
   onContinue,
   onSelectionsChange,
 }: StarterPackExplorerProps) {
-  const usesWrappedCategoryRail = Platform.OS === 'web';
-  const searchParams = useLocalSearchParams<{ audience?: string; category?: string; selected?: string }>();
+  const usesWebLinks = Platform.OS === 'web';
+  const searchParams = useLocalSearchParams<{ category?: string; needed?: string; selected?: string }>();
   const searchSelectedIds = useMemo(() => getStarterSelectionFromSearch(searchParams.selected), [searchParams.selected]);
   const initialIds = searchSelectedIds ?? initialSelectedIds;
-  const [audience, setAudience] = useState<StarterAudience>('men');
   const [activeCategoryKey, setActiveCategoryKey] = useState<StarterCategoryKey | undefined>();
-  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set(initialSelectedIds));
-  const effectiveAudience = usesWrappedCategoryRail ? getAudienceFromSearch(searchParams.audience) : audience;
-  const effectiveActiveCategoryKey = usesWrappedCategoryRail
-    ? getCategoryFromSearch(searchParams.category)
-    : activeCategoryKey;
+  const [needsFoundationNote, setNeedsFoundationNote] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set(initialIds));
+  const effectiveActiveCategoryKey = usesWebLinks ? getCategoryFromSearch(searchParams.category) : activeCategoryKey;
   const effectiveSelectedIds = useMemo(
-    () => (usesWrappedCategoryRail ? initialIds : [...selectedIds]),
-    [initialIds, selectedIds, usesWrappedCategoryRail],
+    () => (usesWebLinks ? initialIds : [...selectedIds]),
+    [initialIds, selectedIds, usesWebLinks],
   );
   const effectiveSelectedSet = useMemo(() => new Set(effectiveSelectedIds), [effectiveSelectedIds]);
+  const categoryCounts = useMemo(() => getStarterCategoryCounts(effectiveSelectedIds), [effectiveSelectedIds]);
+  const selectedCount = effectiveSelectedSet.size;
+  const isFoundationReady = selectedCount >= FOUNDATION_MINIMUM_TOTAL;
 
   const activeCategory = useMemo(
     () => starterCategories.find((category) => category.key === effectiveActiveCategoryKey),
     [effectiveActiveCategoryKey],
   );
+  const showFoundationNote =
+    !activeCategory && (needsFoundationNote || getSearchString(searchParams.needed) === 'foundation') && !isFoundationReady;
 
   useEffect(() => {
-    if (usesWrappedCategoryRail && searchSelectedIds) {
+    if (usesWebLinks && searchSelectedIds) {
       onSelectionsChange?.(searchSelectedIds);
     }
-  }, [onSelectionsChange, searchSelectedIds, usesWrappedCategoryRail]);
+  }, [onSelectionsChange, searchSelectedIds, usesWebLinks]);
 
   function toggleVariant(id: string) {
     const next = new Set(selectedIds);
@@ -387,6 +405,36 @@ export function StarterPackExplorer({
     setActiveCategoryKey(undefined);
   }
 
+  function handleNativeContinue() {
+    const nextSelectionIds = [...selectedIds];
+
+    onContinue(nextSelectionIds);
+
+    if (activeCategory) {
+      setActiveCategoryKey(undefined);
+      setNeedsFoundationNote(nextSelectionIds.length < FOUNDATION_MINIMUM_TOTAL);
+      return;
+    }
+
+    if (nextSelectionIds.length < FOUNDATION_MINIMUM_TOTAL) {
+      setNeedsFoundationNote(true);
+      return;
+    }
+
+    router.push(getFoundationReceiptHref(nextSelectionIds) as Href);
+  }
+
+  function handleWebContinue() {
+    onContinue([...effectiveSelectedIds]);
+  }
+
+  const continueHref = activeCategory || !isFoundationReady
+    ? getStarterPackHref({
+        needsFoundation: true,
+        selectionIds: effectiveSelectedIds,
+      })
+    : getFoundationReceiptHref(effectiveSelectedIds);
+
   return (
     <View style={styles.shell}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -394,45 +442,22 @@ export function StarterPackExplorer({
           <Text style={styles.eyebrow}>starting point</Text>
           <Text style={styles.headline}>{activeCategory ? activeCategory.label : 'what you already own.'}</Text>
           <Text style={styles.subcaption}>
-            {activeCategory ? activeCategory.deck : `${starterTotal} foundation tones. choose the ones that feel familiar.`}
+            {activeCategory ? activeCategory.deck : `${starterTotal} foundation tones. choose what feels familiar.`}
           </Text>
         </View>
 
-        <View style={styles.audienceRail} accessibilityRole="radiogroup">
-          {(['men', 'women'] as const).map((audienceOption) =>
-            usesWrappedCategoryRail ? (
-              <a
-                aria-checked={effectiveAudience === audienceOption}
-                href={getStarterPackHref({
-                  audience: audienceOption,
-                  category: effectiveActiveCategoryKey,
-                  selectionIds: effectiveSelectedIds,
-                })}
-                key={audienceOption}
-                role="radio"
-                style={getWebAudienceButtonStyle(effectiveAudience === audienceOption)}
-              >
-                <Text style={styles.audienceLabel}>{audienceOption}</Text>
-              </a>
-            ) : (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ checked: effectiveAudience === audienceOption }}
-                key={audienceOption}
-                onPress={() => setAudience(audienceOption)}
-                style={[styles.audienceButton, effectiveAudience === audienceOption && styles.audienceButtonActive]}
-              >
-                <Text style={styles.audienceLabel}>{audienceOption}</Text>
-              </Pressable>
-            ),
-          )}
-        </View>
+        {showFoundationNote ? (
+          <View style={styles.foundationNote} accessible accessibilityLabel="the foundation needs more pieces">
+            <Text style={styles.foundationNoteTitle}>the foundation needs a little more weight.</Text>
+            <Text style={styles.foundationNoteMeta}>{FOUNDATION_MINIMUM_TOTAL - selectedCount} pieces before the first signature.</Text>
+          </View>
+        ) : null}
 
         {activeCategory ? (
           <View style={styles.detailNav}>
-            {usesWrappedCategoryRail ? (
+            {usesWebLinks ? (
               <a
-                href={getStarterPackHref({ audience: effectiveAudience, selectionIds: effectiveSelectedIds })}
+                href={getStarterPackHref({ selectionIds: effectiveSelectedIds })}
                 style={getWebBackStyle()}
               >
                 <Text style={styles.backLabel}>foundation ←</Text>
@@ -450,12 +475,15 @@ export function StarterPackExplorer({
           <View style={styles.categoryGrid}>
             {starterCategories.map((category) => {
               const preview = category.variants[0];
+              const markedCount = categoryCounts.find((count) => count.key === category.key)?.count ?? 0;
+              const categoryMeta = markedCount > 0
+                ? `${markedCount} marked · ${category.variants.length} tones`
+                : `${category.variants.length} tones`;
 
-              return usesWrappedCategoryRail ? (
+              return usesWebLinks ? (
                 <a
-                  aria-label={`${preview.label}, ${preview.detail}. ${category.label}. ${category.variants.length} tones.`}
+                  aria-label={`${category.label}. ${categoryMeta}.`}
                   href={getStarterPackHref({
-                    audience: effectiveAudience,
                     category: category.key,
                     selectionIds: effectiveSelectedIds,
                   })}
@@ -466,12 +494,12 @@ export function StarterPackExplorer({
                   <StarterGarmentImage accessible={false} item={preview} size="preview" />
                   <View style={styles.categoryCopy}>
                     <Text style={styles.categoryLabel}>{category.label}</Text>
-                    <Text style={styles.categoryMeta}>{category.variants.length} tones</Text>
+                    <Text style={styles.categoryMeta}>{categoryMeta}</Text>
                   </View>
                 </a>
               ) : (
                 <Pressable
-                  accessibilityLabel={`${preview.label}, ${preview.detail}. ${category.label}. ${category.variants.length} tones.`}
+                  accessibilityLabel={`${category.label}. ${categoryMeta}.`}
                   accessibilityRole="button"
                   key={category.key}
                   onPress={() => selectCategory(category.key)}
@@ -480,7 +508,7 @@ export function StarterPackExplorer({
                   <StarterGarmentImage accessible={false} item={preview} size="preview" />
                   <View style={styles.categoryCopy}>
                     <Text style={styles.categoryLabel}>{category.label}</Text>
-                    <Text style={styles.categoryMeta}>{category.variants.length} tones</Text>
+                    <Text style={styles.categoryMeta}>{categoryMeta}</Text>
                   </View>
                 </Pressable>
               );
@@ -492,12 +520,11 @@ export function StarterPackExplorer({
               const isSelected = effectiveSelectedSet.has(variant.id);
               const nextSelectionIds = toggleSelectionId(effectiveSelectedIds, variant.id);
 
-              return usesWrappedCategoryRail ? (
+              return usesWebLinks ? (
                 <a
                   aria-checked={isSelected}
                   aria-label={`${variant.label}, ${variant.detail}`}
                   href={getStarterPackHref({
-                    audience: effectiveAudience,
                     category: activeCategory.key,
                     selectionIds: nextSelectionIds,
                   })}
@@ -545,27 +572,18 @@ export function StarterPackExplorer({
       <View style={styles.footer}>
         <View>
           <Text style={styles.footerCount}>{effectiveSelectedSet.size} marked.</Text>
-          <Text style={styles.footerMeta}>closet begins here.</Text>
+          <Text style={styles.footerMeta}>
+            {isFoundationReady ? 'enough to begin.' : `${FOUNDATION_MINIMUM_TOTAL - selectedCount} before receipt.`}
+          </Text>
         </View>
-        {continueHref ? (
-          usesWrappedCategoryRail ? (
-            <a href={getFoundationReceiptHref(effectiveSelectedIds)} style={getWebCtaStyle()}>
-              <Text style={styles.ctaLabel}>continue →</Text>
-            </a>
-          ) : (
-            <Link
-              accessibilityRole="button"
-              href={continueHref}
-              onPress={() => onContinue([...selectedIds])}
-              style={styles.cta}
-            >
-              <Text style={styles.ctaLabel}>continue →</Text>
-            </Link>
-          )
+        {usesWebLinks ? (
+          <a href={continueHref} onClick={handleWebContinue} style={getWebCtaStyle()}>
+            <Text style={styles.ctaLabel}>continue →</Text>
+          </a>
         ) : (
           <Pressable
             accessibilityRole="button"
-            onPress={() => onContinue([...selectedIds])}
+            onPress={handleNativeContinue}
             style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
           >
             <Text style={styles.ctaLabel}>continue →</Text>
@@ -640,6 +658,30 @@ const styles = StyleSheet.create({
     fontSize: type.bodyMd.size,
     fontWeight: type.bodyMd.weight,
     lineHeight: type.bodyMd.lineHeight,
+  },
+  foundationNote: {
+    gap: spacing[1],
+    borderColor: colors.smoke[200],
+    borderRadius: radius.xs,
+    borderWidth: sizing.hairline,
+    backgroundColor: colors.bone,
+    padding: spacing[3],
+  },
+  foundationNoteTitle: {
+    color: colors.ink,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.bodyLg.size,
+    fontStyle: 'italic',
+    fontWeight: type.bodyLg.weight,
+    lineHeight: type.bodyLg.lineHeight,
+  },
+  foundationNoteMeta: {
+    color: colors.smoke[300],
+    fontFamily: type.families.body,
+    fontSize: type.micro.size,
+    fontWeight: type.micro.weight,
+    letterSpacing: type.micro.letterSpacing,
+    lineHeight: type.micro.lineHeight,
   },
   categoryRail: {
     gap: spacing[2],
@@ -1114,25 +1156,6 @@ function getWebCategoryButtonStyle(isActive: boolean): CSSProperties {
     color: colors.ink,
     textDecoration: 'none',
     textAlign: 'left',
-  };
-}
-
-function getWebAudienceButtonStyle(isActive: boolean): CSSProperties {
-  return {
-    minHeight: sizing.tapTarget,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxSizing: 'border-box',
-    paddingInline: spacing[4],
-    borderRadius: radius.xs,
-    borderStyle: 'solid',
-    borderWidth: sizing.hairline,
-    borderColor: isActive ? colors.ink : colors.smoke[200],
-    background: isActive ? colors.bone : colors.paper,
-    cursor: 'pointer',
-    color: colors.ink,
-    textDecoration: 'none',
   };
 }
 

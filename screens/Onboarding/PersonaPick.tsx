@@ -4,19 +4,33 @@
  */
 import { useState, type CSSProperties } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
+import { getStarterSelectionFromSearch } from '@/components/StarterPack/StarterPackExplorer';
 import { useFirstWeekStore, type Persona } from '@/lib/firstWeek';
 
 const personas: Persona[] = ['work', 'going out', 'weekend'];
+
+function getPersonaFromSearch(value: string | string[] | undefined): Persona | undefined {
+  const persona = Array.isArray(value) ? value[0] : value;
+
+  return personas.includes(persona as Persona) ? (persona as Persona) : undefined;
+}
 
 export function PersonaPick() {
   const savedPersona = useFirstWeekStore((state) => state.persona);
   const requestFirstSignature = useFirstWeekStore((state) => state.requestFirstSignature);
   const setPersona = useFirstWeekStore((state) => state.setPersona);
+  const setStarterSelections = useFirstWeekStore((state) => state.setStarterSelections);
+  const searchParams = useLocalSearchParams<{ persona?: string; selected?: string }>();
+  const searchPersona = getPersonaFromSearch(searchParams.persona);
+  const searchSelectedIds = getStarterSelectionFromSearch(searchParams.selected);
   const [selectedPersona, setSelectedPersona] = useState<Persona>(savedPersona);
+  const effectivePersona = searchPersona ?? selectedPersona;
+  const selectedParam = searchSelectedIds ? `&selected=${encodeURIComponent(searchSelectedIds.join(','))}` : '';
+  const firstSignatureHref = `/onboarding/first-signature?persona=${encodeURIComponent(effectivePersona)}${selectedParam}`;
 
   function handlePersonaSelect(persona: Persona) {
     setSelectedPersona(persona);
@@ -24,8 +38,12 @@ export function PersonaPick() {
   }
 
   function handleBegin() {
-    setPersona(selectedPersona);
-    void requestFirstSignature();
+    if (searchSelectedIds) {
+      setStarterSelections(searchSelectedIds);
+    }
+
+    setPersona(effectivePersona);
+    void requestFirstSignature(effectivePersona);
   }
 
   return (
@@ -38,9 +56,20 @@ export function PersonaPick() {
 
         <View style={styles.options}>
           {personas.map((persona) => {
-            const isSelected = persona === selectedPersona;
+            const isSelected = persona === effectivePersona;
 
-            return (
+            return Platform.OS === 'web' ? (
+              <a
+                aria-checked={isSelected}
+                href={`/onboarding/persona-pick?persona=${encodeURIComponent(persona)}${selectedParam}`}
+                key={persona}
+                onClick={() => handlePersonaSelect(persona)}
+                role="radio"
+                style={getWebOptionStyle(isSelected)}
+              >
+                <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>{persona}</Text>
+              </a>
+            ) : (
               <Pressable
                 accessibilityRole="radio"
                 accessibilityState={{ checked: isSelected }}
@@ -59,7 +88,7 @@ export function PersonaPick() {
         </View>
 
         {Platform.OS === 'web' ? (
-          <a href="/onboarding/first-signature" onClick={handleBegin} style={webCtaStyle}>
+          <a href={firstSignatureHref} onClick={handleBegin} style={webCtaStyle}>
             <Text style={styles.ctaLabel}>begin →</Text>
           </a>
         ) : (
@@ -83,6 +112,26 @@ const webCtaStyle: CSSProperties = {
   color: colors.ink,
   textDecoration: 'none',
 };
+
+function getWebOptionStyle(isSelected: boolean): CSSProperties {
+  return {
+    minHeight: sizing.tapTarget,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxSizing: 'border-box',
+    paddingBlock: spacing[4],
+    paddingInline: spacing[5],
+    borderRadius: radius.xs,
+    borderStyle: 'solid',
+    borderWidth: sizing.hairline,
+    borderColor: colors.ink,
+    background: isSelected ? colors.ink : colors.paper,
+    color: isSelected ? colors.paper : colors.ink,
+    cursor: 'pointer',
+    textDecoration: 'none',
+  };
+}
 
 const styles = StyleSheet.create({
   safeArea: {
