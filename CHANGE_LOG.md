@@ -1,5 +1,7 @@
 # StyleMeUp Change Log
 
+Historical note: entries below 2026-05-04 02:03 PM ET are backfilled from git history and `MODEL_HANDOFF.md`. They capture milestone-level changes and decisions, not every small edit.
+
 ## 2026-05-04 02:03 PM ET
 
 - Changed:
@@ -19,3 +21,124 @@
   - Keep `NEXT_STEPS.md` current after every substantial work session.
   - Append to `CHANGE_LOG.md` whenever features, architecture, workflow rules, or priorities change.
   - Refresh `MODEL_HANDOFF.md` at major breakpoints, milestone completions, and model handoffs.
+
+## 2026-05-03 11:02 PM ET
+
+- Changed:
+  - Stabilized the onboarding and Discover baseline enough to treat the first-week loop as the active product checkpoint.
+  - Locked the current route order:
+    - cover
+    - identity pick
+    - starter pack
+    - foundation receipt
+    - persona pick
+    - first signature
+    - capture prompt
+    - Closet / Discover
+  - Finalized key first-week decisions in code and docs:
+    - six starter categories
+    - identity pick before starter categories
+    - 16-piece gate before foundation receipt
+    - persona-aware first-signature fallback using actual selected foundation pieces
+    - local typed Discover issue content from `vol-18-corduroy`
+- Why:
+  - The product needed one stable spine before expanding into backend orchestration or new editorial surfaces.
+  - We wanted the first signature to feel grounded in the user’s actual selections instead of mystery defaults.
+  - Discover needed to become useful immediately, even before the Magazine pipeline existed.
+- Affected:
+  - onboarding flow
+  - `lib/firstWeek.ts`
+  - Discover surfaces and local issue content
+  - `MODEL_HANDOFF.md`
+- Next:
+  - run manual visible-browser QA in addition to headless verification
+  - keep Discover on local content until the Magazine backend can emit a real manifest
+  - review Magazine orchestration docs before implementing backend workflow code
+
+## 2026-05-03 06:13 PM ET
+
+- Changed:
+  - Built the first-week onboarding foundation in the Expo app.
+  - Added the core Sanctuary flow:
+    - starter pack exploration
+    - foundation receipt
+    - persona pick
+    - first signature reveal
+    - capture handoff
+    - Closet progression
+  - Introduced persisted first-week state with Zustand/MMKV/localStorage portability.
+  - Added the first-signature request shape so a real endpoint could later replace deterministic local templates.
+- Why:
+  - We needed a coherent, testable first-week loop before chasing polish or automation.
+  - Persisted state was necessary so the product could survive refreshes and feel trustworthy on web and native.
+  - The endpoint contract had to exist early so later LLM integration would not force a product rewrite.
+- Affected:
+  - app routes for onboarding, capture, closet, and looks
+  - `lib/firstWeek.ts`
+  - starter pack and outfit composition components
+- Next:
+  - harden web click reliability and route-param persistence
+  - tune persona-to-signature behavior
+  - connect Discover back to owned items and saved progress
+
+## 2026-05-03 07:51 AM ET
+
+- Changed:
+  - Rendered garment imagery in the basics block and pushed the wardrobe prototype beyond generic scaffolding.
+  - Started turning the product from a shell into a wardrobe-specific experience with recognizable garment surfaces.
+- Why:
+  - The app needed to stop feeling like a blank Expo exercise and start carrying the StyleMeUp product language.
+  - Garment representation is central to trust; the UI needs to feel like wardrobe composition, not placeholders in boxes.
+- Affected:
+  - basics block / garment surface components
+  - early wardrobe presentation layer
+- Next:
+  - build the first-week flow on top of those garment primitives
+  - connect visuals to onboarding and closet progression
+
+## 2026-05-03 07:47 AM ET
+
+- Changed:
+  - Scaffolded the Expo managed app foundation and wardrobe prototype.
+  - Established the working stack:
+    - Expo Router
+    - TypeScript strict mode
+    - Zustand
+    - MMKV
+    - Reanimated
+    - Skia
+    - React Query
+- Why:
+  - The repo needed a concrete app runtime that matched the design and architecture rules already written in the docs.
+  - We wanted the implementation stack settled early so later product work would not keep reopening tooling decisions.
+- Affected:
+  - app scaffold
+  - package/dependency setup
+  - project folder structure
+- Next:
+  - begin implementing the first-week onboarding flow
+  - bring garment and closet concepts into the UI
+
+## 2026-05-02 08:51 AM ET
+
+- Changed:
+  - Created the initial StyleMeUp documentation scaffold:
+    - `DESIGN.md`
+    - `AGENTS.md`
+    - `CLAUDE.md`
+    - `STARTING.md`
+    - Magazine skill scaffolding
+    - `issues/vol-18-corduroy.md`
+  - Established the product as a confidence engine with two visual/emotional registers:
+    - Magazine
+    - Sanctuary
+- Why:
+  - We needed brand, product, and implementation rules before writing serious code.
+  - The editorial issue and skill scaffolding gave Discover a real direction from day one instead of abstract future intent.
+- Affected:
+  - core docs
+  - issue seed content
+  - agent/design rules
+- Next:
+  - scaffold the Expo app against the documented stack
+  - use the docs as the implementation contract
