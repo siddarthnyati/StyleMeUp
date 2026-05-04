@@ -8,6 +8,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { colors, sizing } from '@/tokens';
 
+const WEB_INSETS = Platform.OS === 'web'
+  ? { frame: { x: 0, y: 0, width: 0, height: 0 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }
+  : undefined;
+
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -21,7 +25,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
-      <SafeAreaProvider style={styles.provider}>
+      <SafeAreaProvider initialMetrics={WEB_INSETS} style={styles.provider}>
         <View style={styles.root}>
           <View style={styles.preview}>
             <Stack screenOptions={{ headerShown: false }} />
