@@ -1,7 +1,7 @@
 # StyleMeUp Model Handoff
 
 Status: living context for Codex, Gemini, Claude, or any other model continuing the work.
-Last updated: 2026-05-04
+Last updated: 2026-05-04 02:03 PM ET
 
 ## Product Frame
 
@@ -15,6 +15,16 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 6. return for one useful look
 
 `DESIGN.md` is the contract. `AGENTS.md` defines implementation rules. If they conflict, `DESIGN.md` wins.
+
+## Workflow Docs
+
+- `NEXT_STEPS.md` is the living execution plan. Always check it first for the active queue, recent completions, and blockers.
+- `CHANGE_LOG.md` is the dated history of what changed, why it changed, and what follow-up it created.
+- `MODEL_HANDOFF.md` stays compact. It is for current state, major decisions, verification status, and complex breakpoint context, not for the full running history.
+- Before every push or handoff:
+  - confirm the work is reflected in `CHANGE_LOG.md`
+  - update `NEXT_STEPS.md` to match the new truth
+  - refresh this file if the project state meaningfully changed
 
 ## Current Build State
 
@@ -105,6 +115,7 @@ StyleMeUp is a confidence engine disguised as a wardrobe app. The first-week loo
 
 ## Immediate Next Checks
 
+- `NEXT_STEPS.md` is now the primary queue. Return to it first at the start of each substantial work session.
 - Manual browser click testing is still useful in the visible browser for pointer feel and layout, but the baseline route/click flow is verified in headless Chrome.
 - Review `MAGAZINE_AGENT_SPEC.md` and `AI_ORCHESTRATION.md` before implementing any Vercel AI or Supabase workflow code.
 - Decide whether the identity pick should branch starter inventory or only seed future recommendation tone.
