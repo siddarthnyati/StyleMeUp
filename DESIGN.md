@@ -238,6 +238,71 @@ Before any copy ships, ask: *would this sentence appear, verbatim, in a Vogue or
 
 ---
 
+## 5.5 Headline Patterns (for the Magazine pipeline)
+
+The editor executor in `the-edit` pipeline produces trend headlines every week. Functional headlines like *"The Bootcut Jean: Y2K Denim Rewired for 2026"* fail the Vogue test — they read as a Wikipedia subheading, not editorial. Use these patterns instead.
+
+### The four headline shapes
+
+| Pattern | Psychology hook | Example transformation |
+|---|---|---|
+| **The Reversal** | Reframing — flip the era from "old" to "now" | "1990s V-neck jumper" → ***"YOUR DAD'S SWEATER. YOUR MOVE."*** |
+| **The Possessive** | Endowment effect — "your" creates ownership before purchase | "Bootcut jeans return" → ***"WHAT YOUR MOTHER WORE. WORN BETTER."*** |
+| **The Date Stamp** | Curiosity gap — "last seen" opens a loop | "Bohemian layering" → ***"LAST SEEN: 2004. REWRITTEN."*** |
+| **The Single Verb** | Cognitive ease — verb-only is unmistakable | "V-neck heritage knitwear" → ***"RETURNING."*** |
+
+### Headline construction rules
+
+1. **Maximum 6 words.** If you need more, you don't have a headline yet.
+2. **Period at the end.** Never a comma, never a question mark, never an exclamation.
+3. **No colons in trend headlines.** "Bootcut: Y2K Returns" reads as a textbook entry.
+4. **One specific noun per headline.** "The slip dress" beats "minimalist eveningwear."
+5. **Year reference allowed only once per issue.** "1996" or "Y2K" can anchor one card; the rest must work without dates.
+
+### Before / after — recent run output rewritten
+
+| Functional draft (rejected) | Magazine register (correct) |
+|---|---|
+| *"The Bootcut Jean: Y2K Denim Rewired for 2026"* | *"WHAT YOUR MOTHER WORE. CUT BETTER."* |
+| *"Bohemian Layering: The Chloé Decade Returns Through Its Own House"* | *"SIENNA'S CLOSET. STILL OPEN."* |
+| *"The V-Neck Jumper: 1990s Heritage Knitwear at the Center of the Wardrobe"* | *"V FOR THE WARDROBE."* |
+| *"Six Houses Confirmed This Across SS26"* | *"SIX HOUSES. ONE SILHOUETTE."* |
+| *"Three Eras Fashion Is Pulling Back Into the Present"* | *"THREE ERAS. ONE SEASON."* |
+
+### Psychology principles, named
+
+These come from the Growth.Design 106 audit. Apply them deliberately:
+
+- **Curiosity gap** — "LAST SEEN: 2004" is unfinished. The user must read on to close it.
+- **Endowment effect** — "YOUR DAD'S SWEATER" treats the trend as already-owned.
+- **Picture superiority** — pair the headline with a single garment image; never with a collage.
+- **Cognitive ease** — verbless or single-verb sentences scan in <1 second.
+- **Peak-end rule** — the cover headline is the issue's peak. Spend the editorial care here.
+- **Reframing** — old → returning, dated → considered, basic → architectural.
+- **Personalization** — "YOUR" is the most powerful word in the lexicon. Use sparingly.
+
+### What to never do
+
+- Never explain the trend in the headline. The deck does that.
+- Never use the year as the headline ("2026 IS BOOTCUT") — too telegraphed.
+- Never name a specific designer in the headline ("Chloé Returns") — saves them for the body.
+- Never use a question mark. The Magazine doesn't ask.
+- Never use slang the year before it peaks ("BOOTCUTCORE") — slang dates the issue immediately.
+
+### The editor executor enforcement
+
+`the-edit/src/executors/edit.ts` should validate that:
+
+1. `cover.headline` is ≤ 6 words and ends in `.` (not `?`, `!`, or `,`)
+2. `cover.headline` does not contain a colon `:`
+3. Each `trendCards[*].headline` matches one of the four patterns above
+4. No headline mentions a designer or brand by name
+5. At most one headline per issue contains a year
+
+Add these as Zod refines on the `IssueDraftSchema` in the edit executor.
+
+---
+
 ## 6. Color System
 
 ### Core palette
