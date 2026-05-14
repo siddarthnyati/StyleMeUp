@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 
 import { colors, radius, sizing, spacing, type, wardrobeTones } from '@/tokens';
 import type { WardrobeTone } from '@/tokens/wardrobe';
+import { useFirstWeekStore } from '@/lib/firstWeek';
+import { getWardrobeBasicsPhotoUrl } from '@/lib/wardrobeBasicsPhotos';
 
 export type StarterCategoryKey = 'tshirts' | 'jeans' | 'shoes' | 'accessories' | 'boots' | 'jackets';
 export type StarterShape = 'tee' | 'jeans' | 'sneaker' | 'loafer' | 'boot' | 'cap' | 'belt' | 'bag' | 'jacket';
@@ -253,6 +255,9 @@ export function StarterGarmentImage({
   item: StarterVariant;
   size: StarterImageSize;
 }) {
+  const audienceIdentity = useFirstWeekStore((state) => state.audienceIdentity);
+  const photoUrl = getWardrobeBasicsPhotoUrl(item.id, audienceIdentity);
+
   const imageStyle =
     size === 'hero'
       ? styles.heroImage
@@ -272,7 +277,18 @@ export function StarterGarmentImage({
       importantForAccessibility={accessible ? 'auto' : 'no-hide-descendants'}
       style={[imageStyle, styles.garmentFrame, styles.pointerEventsNone]}
     >
-      <View style={[styles.shapeStage, shapeStageStyles[size]]}>{renderStarterShape(item.shape, item.tone)}</View>
+      {photoUrl ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          resizeMode="contain"
+          source={{ uri: photoUrl }}
+          style={styles.basicsPhoto}
+        />
+      ) : (
+        <View style={[styles.shapeStage, shapeStageStyles[size]]}>
+          {renderStarterShape(item.shape, item.tone)}
+        </View>
+      )}
     </View>
   );
 }
@@ -723,6 +739,10 @@ const styles = StyleSheet.create({
     height: sizing.starterVariantImage,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  basicsPhoto: {
+    width: '100%',
+    height: '100%',
   },
   teeWrap: {
     width: sizing.starterShape.teeWrap.width,
