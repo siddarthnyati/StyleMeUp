@@ -362,6 +362,34 @@ Five-axis evaluation:
 
 ---
 
+### Q27. How do you handle provider outages or model unavailability in a production AI workflow?
+
+**Delivery as Sid:**
+
+> Two layers — retry then fall back. Don't pick one or the other.
+>
+> First: retry the same call with exponential backoff. Most "outages" are 60-second spikes. 3 attempts with 3s, 6s, 12s delays catches the vast majority. If you set max retries at 3 you stop wasting time on a real outage.
+>
+> Second: define a fallback. If the primary tier (Pro / large model) is down, drop to a cheaper or faster tier (Flash / small model). Quality might dip 10-15%, but you ship something instead of failing. Mark which tier was actually used so you can re-run later for upgrades.
+>
+> Third: log the fallback rate. If it's >5%, you have a real problem — either your primary's reliability is poor or you under-provisioned. Track this in your dashboard.
+>
+> The trap is making fallback automatic without telling users. If your premium product silently degrades, you lose trust when they notice. Either disclose ("we're running in a degraded mode") or make fallback indistinguishable enough that they don't.
+
+**Points to remember:**
+
+1. **Retry with exponential backoff** before falling back. 3 attempts × (3s, 6s, 12s).
+2. **Define a fallback tier** that's guaranteed-available. Cheaper or smaller model.
+3. **Log the fallback rate** as a quality SLO. >5% = investigate.
+4. **Mark which tier was actually used** so you can re-run upgrades later.
+5. **Either disclose degradation or hide it well** — never the middle.
+
+**Example from `the-edit`:** the wardrobe basics generator routes hero items to Nano Banana Pro (`gemini-3-pro-image-preview`) and the rest to Flash. On 2026-05-14, Pro was overloaded for 90+ minutes — every Pro call returned 503 UNAVAILABLE. The script caught the error, retried 3× with backoff, and fell back to Flash for all 10 Pro items. Result: 20/20 images generated, $0.78 cost, no manual intervention. The `wardrobe_basics.generation_model` column records which tier actually ran, so we can re-run Pro upgrades for specific items later when capacity returns.
+
+**Pro tip:** the fallback path needs the same code quality as the primary. Most outages reveal that the fallback was never actually tested end-to-end. Force a synthetic outage in CI.
+
+---
+
 ## How to use this doc
 
 - Read each question, give yourself 60-90 seconds to answer out loud, then read the written answer.

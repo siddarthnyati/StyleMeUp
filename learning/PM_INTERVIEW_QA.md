@@ -519,6 +519,34 @@ The lessons: the first run is always more expensive than you expect. Caps are ma
 
 ---
 
+### Q25. How do you build for gender inclusivity without it feeling tokenistic?
+
+**Delivery as Sid:**
+
+> Tokenism is when you add diversity as a label on top of a product designed around one default. Real inclusivity is when the silhouettes, sizes, and language are designed for the breadth from day one.
+>
+> The cheapest tokenistic move is "we'll just relabel the unisex tee as men/women." That's the version that gets called out. Real work is recognizing that a men's white tee is a different silhouette than a women's white tee — different weight, different fit through the waist, different sleeve length. Both can be cut from the same fabric philosophy, but the construction differs.
+>
+> For the platform, this means the catalog can't be one list with a gender filter. It has to be two catalogs that share principles (quiet luxury, brand-anchored, void background) but differ in execution. The user picks their preferred starting point, not their lens on a default.
+>
+> The trap going the other direction: over-engineering gender combinations. You don't need to model 7 dimensions. Three or four well-considered presets cover most of the population gracefully. The point is: someone who picks "women" doesn't get a worse version of "men" — they get a real catalog designed for them.
+
+**Points to remember:**
+
+1. **Tokenism = relabeling.** Real inclusion = silhouettes designed differently from day one.
+2. **Two catalogs sharing principles** beats one catalog with a gender filter.
+3. **Reference real construction differences** — fabric weight, fit, length, hardware — not just styling.
+4. **3-4 presets, not 7 dimensions.** Over-segmentation is its own problem.
+5. **The "neither" path** matters: design for non-binary too, treating it as a real preset not an afterthought.
+
+**Example from styleMeUp:** the wardrobe basics catalog is split into 10 men + 10 women. The men's white tee is heavyweight 200gsm boxy cotton with a ribbed crew collar (Common Projects spec). The women's white tee is midweight 160gsm Pima with waist suppression and a slimmer crew (Toteme spec). Both are "white tees" — but they're real garments built differently. The styleMeUp onboarding's `audienceIdentity` pick (`man` / `woman` / `non-binary`) routes to the right catalog. Non-binary users see the full union, treating it as the most expressive option rather than the default-of-default.
+
+**Psychology principle:** the endowment effect needs the garment to feel ownable — "this is for me," not "this is the closest version of a thing not designed for me." Inclusive design is the only way to trigger ownership across the audience.
+
+**Pro tip:** the cost of two real catalogs vs one labeled catalog is small (~$0.40 extra at our scale). The cost of getting called out for tokenism is brand-killing. Always do the work.
+
+---
+
 ## How to use this doc
 
 - For each question, give yourself 60-90 seconds to think aloud, then read the answer.
