@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
+import { useFirstWeekStore } from '@/lib/firstWeek';
+import { isNewMagazineIssue, useLatestMagazineIssue } from '@/lib/magazineFeed';
 
 type Destination = 'discover' | 'closet' | 'capture' | 'looks';
 
@@ -23,6 +25,9 @@ const destinations: {
 
 export function BottomNavigation({ active, register }: BottomNavigationProps) {
   const isMagazine = register === 'Magazine';
+  const latestIssueQuery = useLatestMagazineIssue();
+  const seenMagazineIssueSlug = useFirstWeekStore((state) => state.seenMagazineIssueSlug);
+  const showDiscoverBadge = isNewMagazineIssue(latestIssueQuery.data, seenMagazineIssueSlug);
 
   return (
     <View style={[styles.bar, isMagazine && styles.barMagazine]}>
@@ -32,6 +37,9 @@ export function BottomNavigation({ active, register }: BottomNavigationProps) {
         return (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={
+              destination.key === 'discover' && showDiscoverBadge ? 'Discover, new Magazine issue live' : destination.label
+            }
             accessibilityState={{ selected: isActive }}
             key={destination.key}
             onPress={() => router.push(destination.path)}
@@ -41,15 +49,18 @@ export function BottomNavigation({ active, register }: BottomNavigationProps) {
               pressed && styles.itemPressed,
             ]}
           >
-            <View
-              style={[
-                styles.markerPill,
-                isMagazine && styles.markerPillMagazine,
-                destination.key === 'capture' && styles.captureMarker,
-                isActive && styles.markerPillActive,
-                isMagazine && isActive && styles.markerPillActiveMagazine,
-              ]}
-            />
+            <View style={styles.markerWrap}>
+              <View
+                style={[
+                  styles.markerPill,
+                  isMagazine && styles.markerPillMagazine,
+                  destination.key === 'capture' && styles.captureMarker,
+                  isActive && styles.markerPillActive,
+                  isMagazine && isActive && styles.markerPillActiveMagazine,
+                ]}
+              />
+              {destination.key === 'discover' && showDiscoverBadge && !isActive ? <View style={styles.badgeDot} /> : null}
+            </View>
             <Text
               style={[
                 styles.label,
@@ -94,6 +105,9 @@ const styles = StyleSheet.create({
   itemPressed: {
     opacity: 0.64,
   },
+  markerWrap: {
+    position: 'relative',
+  },
   markerPill: {
     width: 18,
     height: 3,
@@ -112,6 +126,15 @@ const styles = StyleSheet.create({
   captureMarker: {
     width: 12,
     height: 12,
+    borderRadius: radius.pill,
+    backgroundColor: colors.power,
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -7,
+    right: -9,
+    width: 8,
+    height: 8,
     borderRadius: radius.pill,
     backgroundColor: colors.power,
   },

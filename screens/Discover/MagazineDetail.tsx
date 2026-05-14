@@ -2,26 +2,37 @@
  * @register Magazine
  * @design-ref DESIGN.md §1.5, §10 (Discover), §12
  */
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius, sizing, spacing, type } from '@/tokens';
+import { colors, sizing, spacing, type } from '@/tokens';
 import { BottomNavigation } from '@/components/BottomNavigation/BottomNavigation';
 import { GarmentTile } from '@/components/GarmentTile/GarmentTile';
 import { useFirstWeekStore } from '@/lib/firstWeek';
-import { getMagazineSurface } from '@/lib/magazineIssue';
+import { findMagazineSurface, isNewMagazineIssue, issueWithFallback, useLatestMagazineIssue } from '@/lib/magazineFeed';
 
 export function MagazineDetail() {
   const searchParams = useLocalSearchParams<{ slug?: string }>();
   const slug = Array.isArray(searchParams.slug) ? searchParams.slug[0] : searchParams.slug;
-  const surface = getMagazineSurface(slug);
+  const issueQuery = useLatestMagazineIssue();
+  const issue = issueWithFallback(issueQuery.data);
+  const surface = findMagazineSurface(issue, slug);
   const capturedPieces = useFirstWeekStore((state) => state.capturedPieces);
+  const markMagazineIssueSeen = useFirstWeekStore((state) => state.markMagazineIssueSeen);
+  const seenMagazineIssueSlug = useFirstWeekStore((state) => state.seenMagazineIssueSlug);
   const starterSelections = useFirstWeekStore((state) => state.starterSelections);
   const selectedIdSet = new Set(starterSelections);
   const hasBase =
     surface.baseSelectionIds.some((selectionId) => selectedIdSet.has(selectionId)) ||
-    capturedPieces.some((piece) => surface.body.includes(piece.label.split(' ')[0]));
+    capturedPieces.some((piece) => surface.body.toLowerCase().includes(piece.label.split(' ')[0].toLowerCase()));
+
+  useEffect(() => {
+    if (isNewMagazineIssue(issueQuery.data, seenMagazineIssueSlug)) {
+      markMagazineIssueSeen(issueQuery.data.slug);
+    }
+  }, [issueQuery.data, markMagazineIssueSeen, seenMagazineIssueSlug]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -38,10 +49,22 @@ export function MagazineDetail() {
           <Text style={styles.deck}>{surface.deck}</Text>
         </View>
 
-        <GarmentTile detail={surface.section.toUpperCase()} kind={surface.kind} label={surface.headline} register="Magazine" />
+        {surface.imageUrl ? (
+          <Image source={{ uri: surface.imageUrl }} style={styles.issueImage} resizeMode="cover" />
+        ) : (
+          <GarmentTile detail={surface.section.toUpperCase()} kind={surface.kind} label={surface.headline} register="Magazine" />
+        )}
 
         <View style={styles.copyBlock}>
           <Text style={styles.body}>{surface.body}</Text>
+          <View style={styles.ruleBlock}>
+            <Text style={styles.sectionTitle}>the return.</Text>
+            <Text style={styles.bodyMuted}>{surface.history || issue.history || surface.deck}</Text>
+          </View>
+          <View style={styles.ruleBlock}>
+            <Text style={styles.sectionTitle}>why now.</Text>
+            <Text style={styles.bodyMuted}>{surface.whyNow || issue.whyNow || issue.sourceSummary}</Text>
+          </View>
           {hasBase ? (
             <View style={styles.matchBlock}>
               <Text style={styles.matchText}>you have the base.</Text>
@@ -52,7 +75,7 @@ export function MagazineDetail() {
               </Link>
             </View>
           ) : (
-            <Text style={styles.bodyMuted}>start with the foundation. the line will meet you there.</Text>
+            <Text style={styles.bodyMuted}>not in your closet yet. that is useful information.</Text>
           )}
         </View>
       </ScrollView>
@@ -96,6 +119,7 @@ const styles = StyleSheet.create({
     fontWeight: type.micro.weight,
     letterSpacing: type.micro.letterSpacing,
     lineHeight: type.micro.lineHeight,
+    textTransform: 'uppercase',
   },
   headline: {
     color: colors.paper,
@@ -112,11 +136,30 @@ const styles = StyleSheet.create({
     fontWeight: type.displayMd.weight,
     lineHeight: type.displayMd.lineHeight,
   },
+  issueImage: {
+    width: '100%',
+    aspectRatio: 0.8,
+    backgroundColor: colors.shadow,
+  },
   copyBlock: {
-    gap: spacing[4],
+    gap: spacing[5],
     borderColor: colors.smoke[500],
     borderTopWidth: sizing.hairline,
     paddingTop: spacing[4],
+  },
+  ruleBlock: {
+    gap: spacing[2],
+    borderColor: colors.smoke[500],
+    borderTopWidth: sizing.hairline,
+    paddingTop: spacing[4],
+  },
+  sectionTitle: {
+    color: colors.paper,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.displayMd.size,
+    fontStyle: 'italic',
+    fontWeight: type.displayMd.weight,
+    lineHeight: type.displayMd.lineHeight,
   },
   body: {
     color: colors.paper,
@@ -127,18 +170,16 @@ const styles = StyleSheet.create({
   },
   bodyMuted: {
     color: colors.smoke[300],
-    fontFamily: type.families.displayMagazine,
-    fontSize: type.bodyLg.size,
-    fontStyle: 'italic',
-    fontWeight: type.bodyLg.weight,
-    lineHeight: type.bodyLg.lineHeight,
+    fontFamily: type.families.body,
+    fontSize: type.bodyMd.size,
+    fontWeight: type.bodyMd.weight,
+    lineHeight: type.bodyMd.lineHeight,
   },
   matchBlock: {
     gap: spacing[2],
     borderColor: colors.smoke[500],
-    borderWidth: sizing.hairline,
-    borderRadius: radius.xs,
-    padding: spacing[3],
+    borderTopWidth: sizing.hairline,
+    paddingTop: spacing[4],
   },
   matchText: {
     color: colors.paper,

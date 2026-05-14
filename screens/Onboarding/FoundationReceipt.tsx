@@ -2,7 +2,7 @@
  * @register Sanctuary
  * @design-ref DESIGN.md §1.5, §10 (Onboarding), §12
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ export function FoundationReceipt() {
   const setStarterSelections = useFirstWeekStore((state) => state.setStarterSelections);
   const starterSelections = useFirstWeekStore((state) => state.starterSelections);
   const searchParams = useLocalSearchParams<{ selected?: string }>();
-  const selectedFromSearch = getStarterSelectionFromSearch(searchParams.selected);
+  const selectedFromSearch = useMemo(() => getStarterSelectionFromSearch(searchParams.selected), [searchParams.selected]);
   const receiptSelections = selectedFromSearch ?? starterSelections;
   const categoryCounts = getStarterCategoryCounts(receiptSelections).filter((category) => category.count > 0);
   const totalMarked = categoryCounts.reduce((total, category) => total + category.count, 0);

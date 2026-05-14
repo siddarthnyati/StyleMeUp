@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { createMMKV } from 'react-native-mmkv';
 import { create } from 'zustand';
 import type { StateStorage } from 'zustand/middleware';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware.js';
 
 import {
   getStarterVariantsByIds,
@@ -63,8 +63,10 @@ type FirstWeekState = {
   lastDressingRoomDate: string | null;
   persona: Persona;
   savedLooks: SavedLook[];
+  seenMagazineIssueSlug: string | null;
   starterSelections: string[];
   tasteNotes: string[];
+  markMagazineIssueSeen: (slug: string) => void;
   markFoundationReceiptSeen: () => void;
   requestFirstSignature: (persona?: Persona) => Promise<void>;
   saveCapturedPiece: () => void;
@@ -87,6 +89,7 @@ type PersistedFirstWeekState = Partial<
     | 'lastDressingRoomDate'
     | 'persona'
     | 'savedLooks'
+    | 'seenMagazineIssueSlug'
     | 'starterSelections'
     | 'tasteNotes'
   >
@@ -100,6 +103,10 @@ function isLegacySeededStarterSelection(value: unknown) {
     value.length === legacySeededStarterSelections.length &&
     legacySeededStarterSelections.every((selectionId) => value.includes(selectionId))
   );
+}
+
+function areSelectionIdsEqual(first: readonly string[], second: readonly string[]) {
+  return first.length === second.length && first.every((selectionId, index) => selectionId === second[index]);
 }
 
 function migrateFirstWeekState(persistedState: unknown) {
@@ -577,8 +584,10 @@ export const useFirstWeekStore = create<FirstWeekState>()(
       lastDressingRoomDate: null,
       persona: 'work',
       savedLooks: [],
+      seenMagazineIssueSlug: null,
       starterSelections: [],
       tasteNotes: [],
+      markMagazineIssueSeen: (slug) => set({ seenMagazineIssueSlug: slug }),
       markFoundationReceiptSeen: () => set({ foundationReceiptSeen: true }),
       requestFirstSignature: async (personaOverride) => {
         const state = get();
@@ -640,12 +649,18 @@ export const useFirstWeekStore = create<FirstWeekState>()(
       setLastDressingRoomDate: (date) => set({ lastDressingRoomDate: date }),
       setPersona: (persona) => set({ firstSignatureDraft: null, firstSignatureRequestStatus: 'idle', persona }),
       setStarterSelections: (selectionIds) =>
-        set((state) => ({
-          firstSignatureDraft: null,
-          firstSignatureRequestStatus: 'idle',
-          starterSelections: selectionIds,
-          tasteNotes: buildTasteNotes(selectionIds, state.capturedPieces, state.savedLooks),
-        })),
+        set((state) => {
+          if (areSelectionIdsEqual(state.starterSelections, selectionIds)) {
+            return state;
+          }
+
+          return {
+            firstSignatureDraft: null,
+            firstSignatureRequestStatus: 'idle',
+            starterSelections: selectionIds,
+            tasteNotes: buildTasteNotes(selectionIds, state.capturedPieces, state.savedLooks),
+          };
+        }),
     }),
     {
       migrate: migrateFirstWeekState,

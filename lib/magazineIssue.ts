@@ -6,19 +6,30 @@ export type MagazineSurface = {
   deck: string;
   eyebrow: string;
   headline: string;
+  history?: string;
+  imagePath?: string;
+  imageUrl?: string;
   kind: GarmentKind;
   section: 'cover' | 'trend' | 'curator';
   slug: string;
+  sourceSummary?: string;
+  whyNow?: string;
 };
 
 export type MagazineIssue = {
   audiencePersona: string;
   cover: MagazineSurface;
+  curatorCards?: MagazineSurface[];
+  history?: string;
   publishDate: string;
   slug: string;
+  sourceCount?: number;
+  sourceSummary?: string;
   title: string;
   trend: string;
+  trendCards?: MagazineSurface[];
   volume: number;
+  whyNow?: string;
   surfaces: MagazineSurface[];
 };
 

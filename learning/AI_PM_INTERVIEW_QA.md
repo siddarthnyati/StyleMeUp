@@ -3,6 +3,7 @@
 A living doc. After every major iteration of the apps, add new questions or extend the examples in existing answers. Read top-to-bottom for ramp-up; jump by difficulty for targeted prep.
 
 **Difficulty key:**
+
 - 🟢 **EASY** — first-pass screen, terminology check
 - 🟡 **MEDIUM** — typical AI PM round
 - 🟠 **HARD** — senior AI PM, system design
@@ -43,6 +44,7 @@ A **fully autonomous agent** lets the LLM choose its own actions in a loop, ofte
 Hallucination = the model confidently asserts something that isn't true. Common in LLMs because they predict plausible-sounding next tokens, not factual ones.
 
 **Reduction techniques (in order of effectiveness):**
+
 1. **Grounding** — give the model real source material in the prompt and instruct it to only use that.
 2. **Structured outputs** — force the response shape so it can't ramble into invention.
 3. **Citation requirement** — make the model cite which source backs each claim.
@@ -129,12 +131,14 @@ Layered defense:
 Rule of thumb: use the smallest model that passes your quality bar.
 
 Decision factors:
+
 - **Task complexity** — classification/extraction → small model. Creative writing → large.
 - **Latency budget** — small models are 3-10× faster.
 - **Cost** — at scale, the per-call difference compounds.
 - **Eval pass rate** — run the smaller model first; if it hits ≥95% of your quality bar, use it.
 
 **Example from `the-edit`:** we use Claude Sonnet 4.6 for everything (single-model simplicity). For images, we route by slot:
+
 - Cover slots → Gemini 3 Pro Image ($0.10/img) — quality matters most for the hero
 - Trend/curator cards → Gemini 2.5 Flash Image ($0.039/img) — good enough at 1/3 the cost
 
@@ -149,6 +153,7 @@ Net: $0.50 added cost for materially better covers, $0 added cost where it doesn
 Evals = systematic measurement of model output quality against a labeled or rule-based standard.
 
 **Three types:**
+
 - **Reference-based** — compare output to a known-good reference (BLEU, ROUGE, exact match).
 - **LLM-as-judge** — a separate model rates outputs on quality dimensions.
 - **User signal** — click-through, thumbs-up, completion rate.
@@ -198,6 +203,7 @@ You need three numbers:
 Hard because outputs are non-deterministic. You can't compare "did user A see the right thing?" the way you would for a UI tweak.
 
 **Approach:**
+
 1. **Fix the seed/temperature** so the variant is reproducible enough.
 2. **Test the WRAPPER, not the model** — A/B test the prompt, the system message, the tool surface, the placement. Hold the model constant.
 3. **Use cohort metrics, not per-output** — % of users who completed the task, time-to-completion, return rate.
@@ -213,12 +219,14 @@ Hard because outputs are non-deterministic. You can't compare "did user A see th
 ### Q13. Vendor APIs vs hosting open-source models — when?
 
 **Use vendor APIs when:**
+
 - Speed to market matters (most early-stage products)
 - Quality of frontier models > open-source
 - You don't have ML infra team
 - Spend < ~$10K/month
 
 **Self-host when:**
+
 - Latency-sensitive (open-source on your hardware can be faster than API round-trips)
 - Cost > ~$10K/month and a smaller open model passes your evals
 - Data sovereignty is a hard requirement (regulated industries)
@@ -324,6 +332,7 @@ Five-axis evaluation:
 5. **Specific features** — long context? Native tool use? Multimodal? Caching support?
 
 **My defaults today:**
+
 - **Claude (Sonnet 4.6, Opus 4.7)** — long-form writing, instruction following, prompt caching, structured outputs. Best at "follow my brand voice."
 - **GPT** — broad capability, great function calling, big ecosystem. Best at "drop-in production."
 - **Gemini** — multimodal (images, video, audio), Imagen for image gen, fast at low cost. Best at "I need to handle PDFs/screenshots."

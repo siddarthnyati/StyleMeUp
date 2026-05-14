@@ -2,6 +2,65 @@
 
 Historical note: entries below 2026-05-04 02:03 PM ET are backfilled from git history and `MODEL_HANDOFF.md`. They capture milestone-level changes and decisions, not every small edit.
 
+## 2026-05-14 (Magazine new issue badge)
+
+- Changed:
+  - Added persisted `seenMagazineIssueSlug` state to track whether the latest remote Magazine issue has been opened.
+  - Added a Discover bottom-navigation badge dot when the public the-edit API returns an unseen remote issue.
+  - Added a `new issue live.` badge on the Discover hero for unseen remote issues.
+  - Mark remote issues seen when their detail page is opened, while keeping local Vol. 18 fallback unbadged.
+  - Fixed a foundation receipt maximum-update-depth loop caused by repeatedly syncing a freshly parsed `selected=` query array into persisted first-week state.
+- Why:
+  - The app needed a visible user-facing signal when a new Magazine issue is published from the-edit.
+  - The badge should be tied to the public remote issue, not to fallback content or pipeline/admin state.
+- Affected:
+  - `components/BottomNavigation/BottomNavigation.tsx`
+  - `lib/firstWeek.ts`
+  - `lib/magazineFeed.ts`
+  - `screens/Discover/Discover.tsx`
+  - `screens/Discover/MagazineDetail.tsx`
+  - `NEXT_STEPS.md`
+  - `MODEL_HANDOFF.md`
+- Verification:
+  - `npx tsc --noEmit`
+  - `npm run lint`
+  - `git diff --check`
+  - Browser smoke test confirmed remote Vol. 19, signed image elements, new-issue badge, mark-seen behavior, and fallback Vol. 18 with no badge under an invalid API root.
+  - Full onboarding browser run confirmed partial receipt fallback, 16-item receipt, first signature from selected foundation, capture-to-Closet, and Discover remote issue with no page or console errors.
+- Next:
+  - do a human visual pass on the running Expo web app at `http://localhost:8010`
+
+## 2026-05-07 (Remote Magazine Discover + learning update)
+
+- Changed:
+  - Added React Query at the app root.
+  - Added `lib/magazineFeed.ts` to fetch the latest published issue from the-edit's Vercel API and fall back to local Vol. 18 content.
+  - Extended `lib/magazineIssue.ts` issue/surface types for remote image URLs, history, why-now, source summary, trend cards, and curator cards.
+  - Reworked Discover into a Magazine experience: latest-issue hero, trend grid, concise writeups, `the return.`, `why now.`, and `you have the base.` match loop.
+  - Reworked `/discover/[slug]` detail pages to read the remote/fallback issue and show history, why-now, image/detail, and match CTA.
+  - Tightened the web app shell so the root/background frame stays black instead of showing the old white band under Magazine screens.
+  - Appended current senior PM / AI PM interview practice to the learning docs without overwriting existing dirty work.
+- Why:
+  - StyleMeUp was still showing a local issue fixture while the-edit had begun publishing real Magazine issues.
+  - The user should see editorial trend content and closet-relevant actions, not pipeline runs/costs.
+- Affected:
+  - `app/_layout.tsx`
+  - `lib/magazineFeed.ts`
+  - `lib/magazineIssue.ts`
+  - `screens/Discover/Discover.tsx`
+  - `screens/Discover/MagazineDetail.tsx`
+  - `learning/PM_INTERVIEW_QA.md`
+  - `learning/AI_PM_INTERVIEW_QA.md`
+  - `learning/HIRING_MANAGER_MODE.md`
+  - `NEXT_STEPS.md`
+  - `MODEL_HANDOFF.md`
+- Verification:
+  - `npx tsc --noEmit` passes.
+- Next:
+  - run `npm run lint`
+  - run Expo web and visually verify `/discover`
+  - simulate API failure and confirm Vol. 18 fallback
+
 ## 2026-05-04 02:38 PM ET
 
 - Changed:

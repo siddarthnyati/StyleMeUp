@@ -1,104 +1,58 @@
 # StyleMeUp Next Steps
 
-Last updated: 2026-05-04 02:38 PM ET
+Last updated: 2026-05-14
 
-## Current status
+## Current Status
 
-StyleMeUp has a stable first-week product spine in the current Expo app and a docs-first architecture for the future Magazine Weekly backend. The app repo is the active product surface. Magazine orchestration remains unimplemented and should move into a separate repo rather than growing inside the Expo client.
+StyleMeUp now has the first real bridge to `the-edit`: Discover can fetch the latest approved Magazine issue from the Vercel admin API and falls back to local Vol. 18 corduroy content if the API is unavailable.
 
-## Completed since last update
+The app now also tracks whether the latest remote Magazine issue has been opened. When a newer published issue is available, Discover shows a `new issue live.` hero badge and the bottom navigation shows a badge dot on Discover until a remote issue detail page is opened.
 
-- Started the first visible-browser QA pass for Track A on the live Expo web app.
-- Tightened shared app chrome after the first QA sweep:
-  - rebuilt the bottom navigation to use full labels with a cleaner active marker instead of single-letter initials
-  - let Closet milestone rows and secondary actions wrap instead of clipping on narrow widths
-  - let the starter-pack footer wrap cleanly so the progress summary and `continue` CTA can coexist on mobile widths
-  - nudged the cover CTA further inboard so it does not feel pinned to the corner
-- Verified the updated app with another headless Chrome pass on:
-  - cover
-  - starter pack
-  - Closet
-  - Discover
-- Identified a remaining viewport framing issue on web:
-  - a white band still appears below the cover
-  - several screens still show slight left-edge offset / right-edge clipping in headless Chrome
-  - this likely lives in the shared web layout or safe-area framing rather than a single screen
-- Stabilized the first-week onboarding checkpoint in the app:
-  - identity pick
-  - starter pack
-  - foundation receipt
-  - persona pick
-  - first signature
-  - capture
-  - Closet / Discover
-- Verified the baseline route and persistence flow in headless Chrome.
-- Wrote the Magazine orchestration planning docs:
-  - `MAGAZINE_AGENT_SPEC.md`
-  - `AI_ORCHESTRATION.md`
-- Adopted a documentation discipline:
-  - `NEXT_STEPS.md` is the living execution plan
-  - `CHANGE_LOG.md` is the historical change record
-  - `MODEL_HANDOFF.md` remains the compact handoff/state document
+The product focus is now the Magazine experience inside the app, not pipeline visibility.
 
-## Current focus
+## Shipped In This Push
 
-We are running two tracks in parallel.
+- Added React Query provider at the app root.
+- Added `lib/magazineFeed.ts`:
+  - reads `EXPO_PUBLIC_THE_EDIT_API_URL`
+  - defaults to `https://the-edit-lime.vercel.app`
+  - fetches `GET /api/issues/latest`
+  - normalizes remote issue content
+  - falls back to `lib/magazineIssue.ts`
+- Extended `lib/magazineIssue.ts` to support remote image URLs, source summary, history, why-now, trend cards, and curator cards.
+- Reworked Discover into a Magazine surface:
+  - cinematic latest issue hero
+  - trend grid
+  - concise writeups
+  - `the return.`
+  - `why now.`
+  - `you have the base.` match loop
+- Reworked `/discover/[slug]` detail pages to show image/detail, history, why-now, and match CTA.
+- Added persisted `seenMagazineIssueSlug` state so the app can badge a newly published remote Magazine issue without notifying on the local Vol. 18 fallback.
+- Updated learning docs additively with 2026 senior PM / AI PM interview practice and new Hiring Manager Mode rounds.
 
-### Track A — Finish the app checkpoint
+## To-do List
 
-Close the current app loop so the first-week experience feels deliberate, reliable, and ready for continued iteration without foundational churn.
+1. [x] Run Expo web and verify `/discover` loads the remote issue from `https://the-edit-lime.vercel.app/api/issues/latest`.
+2. [x] Confirm signed remote images render in the Discover hero, trend cards, and `/discover/[slug]`.
+3. [x] Confirm the Discover nav badge appears for an unseen remote issue and clears after opening a remote detail page.
+4. [x] Temporarily point `EXPO_PUBLIC_THE_EDIT_API_URL` at an invalid URL and confirm local Vol. 18 still renders without a new-issue badge.
+5. [x] Confirm no service-role key or secret env var appears in client code.
+6. [x] Fix and rerun the foundation receipt path after the selected-items maximum-update-depth crash.
+7. [ ] Do one human visual pass on device-sized Expo web before shipping the StyleMeUp changes.
 
-Active focus:
+## Next Product Work
 
-- finish the shared web viewport/layout fix before doing deeper copy and motion polish
-- continue visible-browser QA for pointer feel, spacing, and route continuity
-- polish Discover-to-Closet usefulness, especially `you have the base.` and `build from yours`
-- refine first-signature, capture, and Closet copy/motion consistency against `DESIGN.md`
-- verify persistence and refresh safety for:
-  - `starterSelections`
-  - `persona`
-  - `firstSignatureSaved`
-  - `capturedPieces`
-  - `savedLooks`
+1. Improve the closet matching model behind `you have the base.` so it understands captured garment labels and starter taxonomy more robustly.
+2. Add a quieter empty state when a trend has no closet overlap: useful, not shaming.
+3. Add real remote images after the first published issue exposes signed URLs.
+4. Consider a Magazine archive only after the latest-issue loop feels good.
+5. Continue first-week polish after Discover remote content is verified.
 
-### Track B — Start the separate Magazine agent repo
+## Learning Folder
 
-Use the current docs as the source contract and build a dedicated backend/orchestration repo for Magazine Weekly.
+Current additive updates:
 
-Active focus:
-
-- define the repo boundary and bootstrap shape
-- implement a deterministic TypeScript orchestrator
-- model executor contracts for:
-  - research
-  - rank
-  - edit
-  - prompt
-  - QA
-  - approval
-  - publish
-- use Vercel AI for orchestration/runtime and Supabase for run state, sources, approval state, and manifests
-- stop at approval in V1; no autonomous publish
-
-## Next steps
-
-1. Fix the shared web viewport/layout issue that is still causing bottom whitespace on the cover and slight horizontal framing/clipping on some screens.
-2. Continue the visible-browser QA pass once the shared layout issue is resolved, then record the remaining UI polish list by screen.
-3. Verify persistence and refresh safety for the first-week state keys on web.
-4. Close the app checkpoint with a short list of remaining product fixes instead of opening new surfaces.
-5. Create the separate Magazine agent repo scaffold:
-   - TypeScript project
-   - orchestrator entrypoint
-   - executor interfaces
-   - Supabase run-record shape
-   - local draft workflow
-6. Define the first portable Magazine issue manifest that the app can consume later without knowing orchestration internals.
-7. Keep Discover on local typed issue content until the agent repo can emit a stable manifest and approval-ready draft.
-
-## Blockers and open decisions
-
-- Shared web layout framing is still imperfect in headless Chrome, so the current visible-browser QA pass is not fully closed yet.
-- Decide whether `audienceIdentity` should branch starter inventory soon or remain tone-only for now.
-- Connect the real `EXPO_PUBLIC_STYLEMEUP_LLM_ENDPOINT` only after the current app checkpoint is stable.
-- Add real Vol. 18 assets when they are generated and uploaded; current Discover visuals are still placeholder/editorial silhouettes.
-- Confirm the exact bootstrap and deployment shape for the separate Magazine agent repo before wiring app integration.
+- `learning/PM_INTERVIEW_QA.md`: senior PM questions for competitor AI pressure, AI pricing/unit economics, stakeholder alignment, and non-AI product AI strategy.
+- `learning/AI_PM_INTERVIEW_QA.md`: AI PM questions for eval design, prompt injection, model rollout risk, and AI in existing products.
+- `learning/HIRING_MANAGER_MODE.md`: new answer-free rounds for evals/safety, non-AI products under AI pressure, platform/unit economics, and CEO/VP product taste.

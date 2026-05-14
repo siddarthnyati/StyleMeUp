@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,27 +14,46 @@ const WEB_INSETS = Platform.OS === 'web'
   : undefined;
 
 export default function RootLayout() {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
+
   useEffect(() => {
     if (Platform.OS !== 'web') {
       return;
     }
 
     document.documentElement.style.backgroundColor = colors.ink;
+    document.documentElement.style.height = '100%';
     document.body.style.backgroundColor = colors.ink;
+    document.body.style.height = '100%';
     document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.height = '100%';
+      root.style.backgroundColor = colors.ink;
+    }
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.gestureRoot}>
-      <SafeAreaProvider initialMetrics={WEB_INSETS} style={styles.provider}>
-        <View style={styles.root}>
-          <View style={styles.preview}>
-            <Stack screenOptions={{ headerShown: false }} />
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={styles.gestureRoot}>
+        <SafeAreaProvider initialMetrics={WEB_INSETS} style={styles.provider}>
+          <View style={styles.root}>
+            <View style={styles.preview}>
+              <Stack screenOptions={{ headerShown: false }} />
+            </View>
           </View>
-        </View>
-        <StatusBar style="auto" />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+          <StatusBar style="auto" />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }
 
@@ -58,6 +78,6 @@ const styles = StyleSheet.create({
     maxWidth: process.env.EXPO_OS === 'web' ? sizing.appPreviewMaxWidth : undefined,
     flex: 1,
     height: '100%',
-    backgroundColor: colors.paper,
+    backgroundColor: colors.ink,
   },
 });
