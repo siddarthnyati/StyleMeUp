@@ -5,11 +5,11 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { colors, radius, sizing, spacing, type, wardrobeTones } from '@/tokens';
 import type { WardrobeTone } from '@/tokens/wardrobe';
 import { useFirstWeekStore } from '@/lib/firstWeek';
-import { getWardrobeBasicsPhotoUrl } from '@/lib/wardrobeBasicsPhotos';
+import { getWardrobeBasicsPhotoUrl, pickPhotoFirstVariants } from '@/lib/wardrobeBasicsPhotos';
 
 export type StarterCategoryKey = 'tshirts' | 'jeans' | 'shoes' | 'accessories' | 'boots' | 'jackets';
 export type StarterShape = 'tee' | 'jeans' | 'sneaker' | 'loafer' | 'boot' | 'cap' | 'belt' | 'bag' | 'jacket';
-export type StarterImageSize = 'hero' | 'preview' | 'variant' | 'closetHero' | 'closetRail';
+export type StarterImageSize = 'hero' | 'preview' | 'variant' | 'closetHero' | 'closetRail' | 'categoryThumb';
 
 export type StarterVariant = {
   detail: string;
@@ -267,7 +267,9 @@ export function StarterGarmentImage({
           ? styles.closetHeroImage
           : size === 'closetRail'
             ? styles.closetRailImage
-            : styles.variantImage;
+            : size === 'categoryThumb'
+              ? styles.categoryThumbImage
+              : styles.variantImage;
 
   return (
     <View
@@ -371,6 +373,7 @@ export function StarterPackExplorer({
   onSelectionsChange,
 }: StarterPackExplorerProps) {
   const usesWebLinks = Platform.OS === 'web';
+  const audienceIdentity = useFirstWeekStore((state) => state.audienceIdentity);
   const searchParams = useLocalSearchParams<{ category?: string; needed?: string; selected?: string }>();
   const searchSelectedIds = useMemo(() => getStarterSelectionFromSearch(searchParams.selected), [searchParams.selected]);
   const initialIds = searchSelectedIds ?? initialSelectedIds;
@@ -458,7 +461,7 @@ export function StarterPackExplorer({
           <Text style={styles.eyebrow}>starting point</Text>
           <Text style={styles.headline}>{activeCategory ? activeCategory.label : 'what you already own.'}</Text>
           <Text style={styles.subcaption}>
-            {activeCategory ? activeCategory.deck : `${starterTotal} foundation tones. choose what feels familiar.`}
+            {activeCategory ? activeCategory.deck : `${starterTotal} foundation options. choose what feels familiar.`}
           </Text>
         </View>
 
@@ -483,18 +486,28 @@ export function StarterPackExplorer({
                 <Text style={styles.backLabel}>foundation ←</Text>
               </Pressable>
             )}
-            <Text style={styles.detailCount}>{activeCategory.variants.length} tones</Text>
+            <Text style={styles.detailCount}>{activeCategory.variants.length} options</Text>
           </View>
         ) : null}
 
         {!activeCategory ? (
           <View style={styles.categoryGrid}>
             {starterCategories.map((category) => {
-              const preview = category.variants[0];
+              const previews = pickPhotoFirstVariants(category.variants, audienceIdentity, 3);
               const markedCount = categoryCounts.find((count) => count.key === category.key)?.count ?? 0;
               const categoryMeta = markedCount > 0
-                ? `${markedCount} marked · ${category.variants.length} tones`
-                : `${category.variants.length} tones`;
+                ? `${markedCount} marked · ${category.variants.length} options`
+                : `${category.variants.length} options`;
+
+              const previewRow = (
+                <View style={styles.categoryPreviewRow}>
+                  {previews.map((p, i) => (
+                    <View key={p.id} style={i > 0 ? styles.categoryPreviewSlotSpaced : undefined}>
+                      <StarterGarmentImage accessible={false} item={p} size="categoryThumb" />
+                    </View>
+                  ))}
+                </View>
+              );
 
               return usesWebLinks ? (
                 <a
@@ -507,7 +520,7 @@ export function StarterPackExplorer({
                   role="button"
                   style={getWebCategoryButtonStyle(false)}
                 >
-                  <StarterGarmentImage accessible={false} item={preview} size="preview" />
+                  {previewRow}
                   <View style={styles.categoryCopy}>
                     <Text style={styles.categoryLabel}>{category.label}</Text>
                     <Text style={styles.categoryMeta}>{categoryMeta}</Text>
@@ -521,7 +534,7 @@ export function StarterPackExplorer({
                   onPress={() => selectCategory(category.key)}
                   style={styles.categoryCard}
                 >
-                  <StarterGarmentImage accessible={false} item={preview} size="preview" />
+                  {previewRow}
                   <View style={styles.categoryCopy}>
                     <Text style={styles.categoryLabel}>{category.label}</Text>
                     <Text style={styles.categoryMeta}>{categoryMeta}</Text>
@@ -934,6 +947,19 @@ const styles = StyleSheet.create({
   categoryCopy: {
     gap: spacing[1],
   },
+  categoryPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  categoryPreviewSlotSpaced: {
+    marginLeft: spacing[2],
+  },
+  categoryThumbImage: {
+    width: 56,
+    height: 56,
+    alignSelf: 'center',
+  },
   categoryLabel: {
     color: colors.ink,
     fontFamily: type.families.body,
@@ -1131,13 +1157,16 @@ const styles = StyleSheet.create({
     minHeight: sizing.tapTarget,
     flexShrink: 0,
     justifyContent: 'center',
-    paddingHorizontal: spacing[4],
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.ink,
+    borderRadius: radius.xs,
   },
   ctaPressed: {
-    opacity: 0.64,
+    opacity: 0.78,
   },
   ctaLabel: {
-    color: colors.ink,
+    color: colors.paper,
     fontFamily: type.families.body,
     fontSize: type.bodyMd.size,
     fontWeight: type.headlineMd.weight,
@@ -1160,6 +1189,9 @@ const shapeStageStyles = StyleSheet.create({
   },
   closetRail: {
     transform: [{ scale: 0.76 }],
+  },
+  categoryThumb: {
+    transform: [{ scale: 0.62 }],
   },
 });
 
@@ -1230,9 +1262,13 @@ function getWebCtaStyle(): CSSProperties {
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingInline: spacing[4],
-    color: colors.ink,
+    paddingInline: spacing[5],
+    paddingBlock: spacing[2],
+    background: colors.ink,
+    color: colors.paper,
+    borderRadius: radius.xs,
     textDecoration: 'none',
+    fontWeight: 600,
   };
 }
 

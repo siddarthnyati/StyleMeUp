@@ -32,14 +32,15 @@ const STARTER_TO_BASICS: Record<string, GenderedMap> = {
   'shoe-black-loafer': { women: 'women/black-ballet-flat.png' },
 
   // Boots
-  'boot-black-chelsea': { men: 'men/black-chelsea-boot-men.png' },
+  'boot-black-chelsea': { men: 'men/black-chelsea-boot-men.png', women: 'women/black-chelsea-boot-women.png' },
 
   // Jackets / outerwear
   'jacket-denim': { men: 'men/denim-trucker-jacket.png' },
   'jacket-charcoal-wool': { men: 'men/navy-wool-blazer-men.png', women: 'women/black-fitted-blazer-women.png' },
+  'jacket-black-bomber': { men: 'men/black-bomber-jacket-men.png', women: 'women/black-bomber-jacket-women.png' },
 
   // Accessories
-  'accessory-black-belt': { men: 'men/black-leather-belt-men.png' },
+  'accessory-black-belt': { men: 'men/black-leather-belt-men.png', women: 'women/black-leather-belt-women.png' },
 };
 
 /**
@@ -73,4 +74,23 @@ export function getWardrobeBasicsPhotoUrl(
 export function hasWardrobeBasicsPhoto(variantId: string): boolean {
   const entry = STARTER_TO_BASICS[variantId];
   return Boolean(entry && (entry.men || entry.women));
+}
+
+/**
+ * Pick N preview variant IDs from a list, preferring ones that have real
+ * photos available for the given audience. Falls back to fillers when
+ * fewer than N photographed variants exist.
+ */
+export function pickPhotoFirstVariants<T extends { id: string }>(
+  variants: readonly T[],
+  audience: AudienceIdentity | null,
+  count: number,
+): T[] {
+  const photographed: T[] = [];
+  const rest: T[] = [];
+  for (const v of variants) {
+    if (getWardrobeBasicsPhotoUrl(v.id, audience)) photographed.push(v);
+    else rest.push(v);
+  }
+  return [...photographed, ...rest].slice(0, count);
 }
