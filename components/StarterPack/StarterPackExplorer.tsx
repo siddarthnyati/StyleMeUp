@@ -4,15 +4,17 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 
 import { colors, radius, sizing, spacing, type, wardrobeTones } from '@/tokens';
 import type { WardrobeTone } from '@/tokens/wardrobe';
-import { useFirstWeekStore } from '@/lib/firstWeek';
+import { useFirstWeekStore, type AudienceIdentity } from '@/lib/firstWeek';
 import { getWardrobeBasicsPhotoUrl, pickPhotoFirstVariants } from '@/lib/wardrobeBasicsPhotos';
 
 export type StarterCategoryKey = 'tshirts' | 'jeans' | 'shoes' | 'accessories' | 'boots' | 'jackets';
 export type StarterShape = 'tee' | 'jeans' | 'sneaker' | 'loafer' | 'boot' | 'cap' | 'belt' | 'bag' | 'jacket';
 export type StarterImageSize = 'hero' | 'preview' | 'variant' | 'closetHero' | 'closetRail' | 'categoryThumb';
+export type StarterGender = 'man' | 'woman' | 'unisex';
 
 export type StarterVariant = {
   detail: string;
+  gender?: StarterGender;
   id: string;
   label: string;
   shape: StarterShape;
@@ -87,7 +89,7 @@ export const starterCategories: StarterCategory[] = [
       { id: 'shoe-grey-runner', label: 'grey runner', detail: 'suede panels. soft line.', shape: 'sneaker', tone: 'heather' },
       { id: 'shoe-navy-sneaker', label: 'navy sneaker', detail: 'deep blue. gum edge.', shape: 'sneaker', tone: 'navy' },
       { id: 'shoe-brown-suede', label: 'brown suede sneaker', detail: 'matte hide. low cut.', shape: 'sneaker', tone: 'brown' },
-      { id: 'shoe-black-loafer', label: 'black loafer', detail: 'single line. polished.', shape: 'loafer', tone: 'black' },
+      { id: 'shoe-black-loafer', label: 'black loafer', detail: 'single line. polished.', shape: 'loafer', tone: 'black', gender: 'woman' },
       { id: 'shoe-burgundy-loafer', label: 'burgundy loafer', detail: 'wine leather. narrow.', shape: 'loafer', tone: 'burgundy' },
       { id: 'shoe-tan-loafer', label: 'tan loafer', detail: 'warm leather. soft vamp.', shape: 'loafer', tone: 'tan' },
       { id: 'shoe-cream-slip', label: 'cream slip-on', detail: 'canvas. clean foxing.', shape: 'sneaker', tone: 'cream' },
@@ -162,6 +164,24 @@ export const starterCategories: StarterCategory[] = [
 
 export const starterTotal = starterCategories.reduce((total, category) => total + category.variants.length, 0);
 export const initialStarterSelectionIds: readonly string[] = [];
+
+export function variantMatchesAudience(variant: StarterVariant, audience: AudienceIdentity | null): boolean {
+  const gender = variant.gender ?? 'unisex';
+  if (gender === 'unisex') return true;
+  // null + non-binary: see everything (no rail chosen, or both rails)
+  if (!audience || audience === 'non-binary') return true;
+  return gender === audience;
+}
+
+export function filterCategoriesByAudience(
+  categories: readonly StarterCategory[],
+  audience: AudienceIdentity | null,
+): StarterCategory[] {
+  return categories.map((category) => ({
+    ...category,
+    variants: category.variants.filter((variant) => variantMatchesAudience(variant, audience)),
+  }));
+}
 
 function renderStarterShape(shape: StarterShape, tone: WardrobeTone) {
   const toneStyle = toneStyles[tone];
@@ -295,10 +315,13 @@ export function StarterGarmentImage({
   );
 }
 
-export function getStarterCategoryCounts(selectionIds: readonly string[]) {
+export function getStarterCategoryCounts(
+  selectionIds: readonly string[],
+  categories: readonly StarterCategory[] = starterCategories,
+) {
   const selectedIdSet = new Set(selectionIds);
 
-  return starterCategories.map((category) => ({
+  return categories.map((category) => ({
     count: category.variants.filter((variant) => selectedIdSet.has(variant.id)).length,
     key: category.key,
     label: category.label,
@@ -386,13 +409,24 @@ export function StarterPackExplorer({
     [initialIds, selectedIds, usesWebLinks],
   );
   const effectiveSelectedSet = useMemo(() => new Set(effectiveSelectedIds), [effectiveSelectedIds]);
-  const categoryCounts = useMemo(() => getStarterCategoryCounts(effectiveSelectedIds), [effectiveSelectedIds]);
+  const audienceCategories = useMemo(
+    () => filterCategoriesByAudience(starterCategories, audienceIdentity),
+    [audienceIdentity],
+  );
+  const audienceTotal = useMemo(
+    () => audienceCategories.reduce((total, category) => total + category.variants.length, 0),
+    [audienceCategories],
+  );
+  const categoryCounts = useMemo(
+    () => getStarterCategoryCounts(effectiveSelectedIds, audienceCategories),
+    [audienceCategories, effectiveSelectedIds],
+  );
   const selectedCount = effectiveSelectedSet.size;
   const isFoundationReady = selectedCount >= FOUNDATION_MINIMUM_TOTAL;
 
   const activeCategory = useMemo(
-    () => starterCategories.find((category) => category.key === effectiveActiveCategoryKey),
-    [effectiveActiveCategoryKey],
+    () => audienceCategories.find((category) => category.key === effectiveActiveCategoryKey),
+    [audienceCategories, effectiveActiveCategoryKey],
   );
   const showFoundationNote =
     !activeCategory && (needsFoundationNote || getSearchString(searchParams.needed) === 'foundation') && !isFoundationReady;
@@ -461,7 +495,7 @@ export function StarterPackExplorer({
           <Text style={styles.eyebrow}>starting point</Text>
           <Text style={styles.headline}>{activeCategory ? activeCategory.label : 'what you already own.'}</Text>
           <Text style={styles.subcaption}>
-            {activeCategory ? activeCategory.deck : `${starterTotal} foundation options. choose what feels familiar.`}
+            {activeCategory ? activeCategory.deck : `${audienceTotal} foundation options. choose what feels familiar.`}
           </Text>
         </View>
 
@@ -492,7 +526,7 @@ export function StarterPackExplorer({
 
         {!activeCategory ? (
           <View style={styles.categoryGrid}>
-            {starterCategories.map((category) => {
+            {audienceCategories.map((category) => {
               const previews = pickPhotoFirstVariants(category.variants, audienceIdentity, 3);
               const markedCount = categoryCounts.find((count) => count.key === category.key)?.count ?? 0;
               const categoryMeta = markedCount > 0

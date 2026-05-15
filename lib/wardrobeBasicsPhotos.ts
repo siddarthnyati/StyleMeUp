@@ -55,14 +55,16 @@ export function getWardrobeBasicsPhotoUrl(
   const entry = STARTER_TO_BASICS[variantId];
   if (!entry) return undefined;
 
-  // For non-binary or unknown: prefer men's catalog as default (boxier
-  // silhouettes read more gender-neutral), but fall back to women's if
-  // only that one was generated.
+  // Strict per-audience: a man never sees a women-cut photo, a woman
+  // never sees a men-cut photo. Non-binary / unset can fall back to
+  // either side (we prefer men's first for the boxier silhouette).
   if (audience === 'woman') {
     return entry.women ? `${SUPABASE_PUBLIC_BASE}/${entry.women}` : undefined;
   }
+  if (audience === 'man') {
+    return entry.men ? `${SUPABASE_PUBLIC_BASE}/${entry.men}` : undefined;
+  }
 
-  // man + non-binary + null all default to men's first, then women's
   const path = entry.men ?? entry.women;
   return path ? `${SUPABASE_PUBLIC_BASE}/${path}` : undefined;
 }
