@@ -18,29 +18,49 @@ const SUPABASE_PUBLIC_BASE =
 type GenderedMap = { men?: string; women?: string };
 
 const STARTER_TO_BASICS: Record<string, GenderedMap> = {
-  // T-shirts — men's catalog has white-crew-tee (boxy 240gsm), women's has white-fitted-tee (160gsm Pima fitted)
+  // ── T-shirts ──────────────────────────────────────────────────────────
+  // men's catalog has boxy crew (240gsm); women's has fitted (160gsm Pima)
   'tee-optic': { men: 'men/white-crew-tee.png', women: 'women/white-fitted-tee.png' },
   'tee-black': { men: 'men/black-crew-tee.png', women: 'women/black-fitted-tee.png' },
+  'tee-heather': { men: 'men/heather-grey-tee-men.png', women: 'women/heather-grey-tee-women.png' },
+  'tee-navy': { men: 'men/navy-crew-tee-men.png', women: 'women/navy-fitted-tee-women.png' },
+  'tee-olive': { men: 'men/olive-crew-tee-men.png', women: 'women/olive-fitted-tee-women.png' },
+  // heather-grey doubles for the "heavy grey tee" variant (same fabric story)
+  'tee-heavy-grey': { men: 'men/heather-grey-tee-men.png', women: 'women/heather-grey-tee-women.png' },
 
-  // Jeans
+  // ── Jeans ────────────────────────────────────────────────────────────
   'jean-raw': { men: 'men/raw-indigo-jean.png', women: 'women/dark-wash-straight-jean-women.png' },
+  'jean-rinsed': { men: 'men/raw-indigo-jean.png', women: 'women/dark-wash-straight-jean-women.png' },
+  'jean-washed': { men: 'men/washed-blue-jean-men.png', women: 'women/washed-blue-jean-women.png' },
+  'jean-straight': { men: 'men/washed-blue-jean-men.png', women: 'women/washed-blue-jean-women.png' },
+  'jean-pale': { men: 'men/pale-denim-jean-men.png', women: 'women/light-wash-jean-women.png' },
+  'jean-black': { men: 'men/black-washed-jean.png' },
   'jean-charcoal': { men: 'men/black-washed-jean.png' },
 
-  // Shoes (sneakers + flats)
+  // ── Shoes (sneakers + loafers) ───────────────────────────────────────
   'shoe-white-court': { men: 'men/white-low-sneaker.png', women: 'women/white-leather-sneaker-women.png' },
-  // ballet flat is women-only; closest masculine analog is the loafer (not yet generated)
-  'shoe-black-loafer': { women: 'women/black-ballet-flat.png' },
+  'shoe-black-court': { men: 'men/black-court-sneaker-men.png' },
+  'shoe-burgundy-loafer': { men: 'men/burgundy-loafer-men.png' },
+  // black loafer — replaced the ballet-flat fallback with a real women's penny loafer
+  'shoe-black-loafer': { women: 'women/black-leather-loafer-women.png' },
 
-  // Boots
+  // ── Boots ────────────────────────────────────────────────────────────
   'boot-black-chelsea': { men: 'men/black-chelsea-boot-men.png', women: 'women/black-chelsea-boot-women.png' },
+  'boot-brown-chelsea': { men: 'men/brown-chelsea-boot-men.png', women: 'women/brown-chelsea-boot-women.png' },
 
-  // Jackets / outerwear
+  // ── Jackets / outerwear ──────────────────────────────────────────────
   'jacket-denim': { men: 'men/denim-trucker-jacket.png' },
+  'jacket-raw-denim': { men: 'men/denim-trucker-jacket.png' },
   'jacket-charcoal-wool': { men: 'men/navy-wool-blazer-men.png', women: 'women/black-fitted-blazer-women.png' },
   'jacket-black-bomber': { men: 'men/black-bomber-jacket-men.png', women: 'women/black-bomber-jacket-women.png' },
+  'jacket-leather': { men: 'men/black-leather-jacket-men.png', women: 'women/black-leather-jacket-women.png' },
+  'jacket-olive-field': { men: 'men/olive-field-jacket-men.png' },
 
-  // Accessories
+  // ── Accessories ──────────────────────────────────────────────────────
   'accessory-black-belt': { men: 'men/black-leather-belt-men.png', women: 'women/black-leather-belt-women.png' },
+  'accessory-brown-belt': { men: 'men/brown-leather-belt-men.png', women: 'women/brown-leather-belt-women.png' },
+  'accessory-navy-cap': { men: 'men/navy-cotton-cap-men.png' },
+  'accessory-white-cap': { women: 'women/white-cotton-cap-women.png' },
 };
 
 /**
