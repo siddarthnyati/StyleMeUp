@@ -1,23 +1,21 @@
 /**
- * @register Sanctuary
- * @design-ref DESIGN.md §1.5, §10 (Onboarding), §12
+ * @register Magazine
+ * @design-ref DESIGN.md §1.5, §10 (Onboarding), §11 (image load-in), §12
+ *
+ * The first-fit audience picker as a Magazine cover: three full-bleed
+ * editorial columns (man | woman | non-binary), claude.design variant 02.
+ * Hero plates + per-rail captions come from lib/firstFitHeroes — the rail
+ * chosen here routes the entire downstream catalog.
  */
 import { type CSSProperties } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius, sizing, spacing, type } from '@/tokens';
+import { colors, motion, sizing, spacing, type } from '@/tokens';
 import { useFirstWeekStore, type AudienceIdentity } from '@/lib/firstWeek';
-
-const identities: {
-  deck: string;
-  label: AudienceIdentity;
-}[] = [
-  { label: 'man', deck: 'tees, denim, leather. cut from that rail.' },
-  { label: 'woman', deck: 'tees, denim, leather. cut from that rail.' },
-  { label: 'non-binary', deck: 'tees, denim, leather. cut without a side.' },
-];
+import { AUDIENCE_CAPTIONS, AUDIENCE_ORDER, getFirstFitHeroUrl } from '@/lib/firstFitHeroes';
 
 export function Identity() {
   const audienceIdentity = useFirstWeekStore((state) => state.audienceIdentity);
@@ -30,83 +28,111 @@ export function Identity() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.stage}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>first fit</Text>
-          <Text style={styles.headline}>your foundation starts with...</Text>
-          <Text style={styles.subcaption}>choose the rail closest to yours.</Text>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>first fit</Text>
+        <Text style={styles.headline}>your foundation starts with…</Text>
+        <Text style={styles.deck}>choose the rail closest to yours.</Text>
+      </View>
 
-        <View style={styles.options} accessibilityRole="radiogroup">
-          {identities.map((identity) => {
-            const isSelected = identity.label === audienceIdentity;
+      <View style={styles.columns} accessibilityRole="radiogroup">
+        {AUDIENCE_ORDER.map((identity) => {
+          const caption = AUDIENCE_CAPTIONS[identity];
+          const heroUrl = getFirstFitHeroUrl(identity);
+          const isSelected = identity === audienceIdentity;
+          const accessibilityLabel = `${identity}. ${caption}`;
 
-            return Platform.OS === 'web' ? (
-              <a
-                aria-checked={isSelected}
-                href="/onboarding/starter-pack"
-                key={identity.label}
-                onClick={() => setAudienceIdentity(identity.label)}
-                role="radio"
-                style={getWebOptionStyle(isSelected)}
-              >
-                <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>{identity.label}</Text>
-                <Text style={[styles.optionDeck, isSelected && styles.optionDeckSelected]}>{identity.deck}</Text>
-              </a>
-            ) : (
-              <Pressable
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected }}
-                key={identity.label}
-                onPress={() => handleSelect(identity.label)}
-                style={({ pressed }) => [styles.option, isSelected && styles.optionSelected, pressed && styles.pressed]}
-              >
-                <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>{identity.label}</Text>
-                <Text style={[styles.optionDeck, isSelected && styles.optionDeckSelected]}>{identity.deck}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          return Platform.OS === 'web' ? (
+            <a
+              aria-checked={isSelected}
+              aria-label={accessibilityLabel}
+              href="/onboarding/starter-pack"
+              key={identity}
+              onClick={() => setAudienceIdentity(identity)}
+              role="radio"
+              style={getWebColumnStyle()}
+            >
+              <Image
+                accessible={false}
+                contentFit="cover"
+                source={{ uri: heroUrl }}
+                style={StyleSheet.absoluteFill}
+                transition={motion.durations.page}
+              />
+              <div style={getWebScrimStyle()}>
+                <Text style={styles.slug}>{identity}</Text>
+                <Text style={styles.caption}>{caption}</Text>
+              </div>
+              {isSelected ? <View pointerEvents="none" style={styles.selectedRule} /> : null}
+            </a>
+          ) : (
+            <Pressable
+              accessibilityLabel={accessibilityLabel}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: isSelected }}
+              key={identity}
+              onPress={() => handleSelect(identity)}
+              style={({ pressed }) => [styles.column, pressed && styles.columnPressed]}
+            >
+              <Image
+                accessible={false}
+                contentFit="cover"
+                source={{ uri: heroUrl }}
+                style={StyleSheet.absoluteFill}
+                transition={motion.durations.page}
+              />
+              <View style={styles.scrim}>
+                <Text style={styles.slug}>{identity}</Text>
+                <Text style={styles.caption}>{caption}</Text>
+              </View>
+              {isSelected ? <View pointerEvents="none" style={styles.selectedRule} /> : null}
+            </Pressable>
+          );
+        })}
       </View>
     </SafeAreaView>
   );
 }
 
-function getWebOptionStyle(isSelected: boolean): CSSProperties {
+function getWebColumnStyle(): CSSProperties {
   return {
-    minHeight: sizing.tapTarget,
+    position: 'relative',
     display: 'flex',
+    flex: 1,
     flexDirection: 'column',
-    justifyContent: 'center',
-    boxSizing: 'border-box',
-    gap: spacing[1],
-    paddingBlock: spacing[4],
-    paddingInline: spacing[5],
-    borderRadius: radius.xs,
-    borderStyle: 'solid',
-    borderWidth: sizing.hairline,
-    borderColor: colors.ink,
-    background: isSelected ? colors.ink : colors.paper,
-    color: isSelected ? colors.paper : colors.ink,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    minHeight: sizing.tapTarget,
     cursor: 'pointer',
     textDecoration: 'none',
+    backgroundColor: colors.void,
+  };
+}
+
+function getWebScrimStyle(): CSSProperties {
+  return {
+    position: 'absolute',
+    insetInlineStart: 0,
+    insetInlineEnd: 0,
+    bottom: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: spacing[1],
+    paddingBlock: `${spacing[7]}px ${spacing[5]}px`,
+    paddingInline: spacing[4],
+    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0))',
   };
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.paper,
-  },
-  stage: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing[5],
-    paddingTop: spacing[7],
-    paddingBottom: spacing[6],
+    backgroundColor: colors.void,
   },
   header: {
     gap: spacing[2],
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[6],
+    paddingBottom: spacing[5],
   },
   eyebrow: {
     color: colors.smoke[300],
@@ -115,60 +141,64 @@ const styles = StyleSheet.create({
     fontWeight: type.micro.weight,
     letterSpacing: type.micro.letterSpacing,
     lineHeight: type.micro.lineHeight,
+    textTransform: 'uppercase',
   },
   headline: {
-    color: colors.ink,
+    color: colors.paper,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.displayLg.size,
+    fontStyle: 'italic',
+    fontWeight: type.displayLg.weight,
+    lineHeight: type.displayLg.lineHeight,
+  },
+  deck: {
+    color: colors.smoke[200],
+    fontFamily: type.families.body,
+    fontSize: type.bodyMd.size,
+    fontWeight: type.bodyMd.weight,
+    lineHeight: type.bodyMd.lineHeight,
+  },
+  columns: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 2,
+    backgroundColor: colors.void,
+  },
+  column: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    backgroundColor: colors.void,
+  },
+  columnPressed: {
+    opacity: 0.86,
+  },
+  scrim: {
+    gap: spacing[1],
+    paddingTop: spacing[7],
+    paddingBottom: spacing[5],
+    paddingHorizontal: spacing[4],
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  slug: {
+    color: colors.paper,
     fontFamily: type.families.displayMagazine,
     fontSize: type.displayMd.size,
     fontStyle: 'italic',
     fontWeight: type.displayMd.weight,
     lineHeight: type.displayMd.lineHeight,
   },
-  subcaption: {
-    color: colors.smoke[300],
-    fontFamily: type.families.body,
-    fontSize: type.bodyMd.size,
-    fontWeight: type.bodyMd.weight,
-    lineHeight: type.bodyMd.lineHeight,
-  },
-  options: {
-    gap: spacing[3],
-  },
-  option: {
-    minHeight: sizing.tapTarget,
-    justifyContent: 'center',
-    gap: spacing[1],
-    borderColor: colors.ink,
-    borderRadius: radius.xs,
-    borderWidth: sizing.hairline,
-    backgroundColor: colors.paper,
-    paddingHorizontal: spacing[5],
-    paddingVertical: spacing[4],
-  },
-  optionSelected: {
-    backgroundColor: colors.ink,
-  },
-  pressed: {
-    opacity: 0.64,
-  },
-  optionLabel: {
-    color: colors.ink,
-    fontFamily: type.families.body,
-    fontSize: type.headlineMd.size,
-    fontWeight: type.headlineMd.weight,
-    lineHeight: type.headlineMd.lineHeight,
-  },
-  optionLabelSelected: {
+  caption: {
     color: colors.paper,
-  },
-  optionDeck: {
-    color: colors.smoke[300],
+    opacity: 0.85,
     fontFamily: type.families.body,
-    fontSize: type.bodyMd.size,
-    fontWeight: type.bodyMd.weight,
-    lineHeight: type.bodyMd.lineHeight,
+    fontSize: type.label.size,
+    fontWeight: type.label.weight,
+    lineHeight: type.label.lineHeight,
   },
-  optionDeckSelected: {
-    color: colors.smoke[200],
+  selectedRule: {
+    ...StyleSheet.absoluteFillObject,
+    borderColor: colors.paper,
+    borderWidth: 1,
   },
 });
