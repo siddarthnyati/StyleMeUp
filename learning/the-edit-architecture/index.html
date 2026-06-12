@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>the-edit · architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #ffffff;
+      --void:  #000000;
+      --ink:   #111111;
+      --smoke-100: #f4f3f0;
+      --smoke-200: #e6e3dd;
+      --smoke-300: #8a857c;
+      --rule:  #d8d4cb;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .display, h1, h2, h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -0.005em;
+      margin: 0;
+    }
+    h1 { font-size: 56px; line-height: 1.05; }
+    h2 { font-size: 32px; line-height: 1.1; }
+    h3 { font-size: 22px; line-height: 1.2; }
+    .eyebrow {
+      font-size: 11px;
+      text-transform: lowercase;
+      letter-spacing: 0.18em;
+      color: var(--smoke-300);
+      font-weight: 500;
+    }
+    .deck { color: var(--smoke-300); }
+    .lowercase { text-transform: lowercase; }
+    .rule { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
+
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 56px 32px 80px; }
+
+    header.spread { margin-bottom: 48px; }
+    header.spread .eyebrow { margin-bottom: 12px; }
+    header.spread h1 { margin-bottom: 16px; }
+    header.spread p.deck { max-width: 640px; font-size: 16px; }
+
+    /* Pipeline */
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 0;
+      border-top: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 8px;
+    }
+    @media (max-width: 900px) {
+      .pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @media (max-width: 540px) {
+      .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .stage {
+      border-right: 1px solid var(--rule);
+      padding: 22px 18px;
+      cursor: pointer;
+      background: transparent;
+      text-align: left;
+      font-family: inherit;
+      color: inherit;
+      font-size: inherit;
+      transition: background-color 120ms ease;
+      position: relative;
+    }
+    .stage:last-child { border-right: none; }
+    .stage:hover { background: var(--smoke-100); }
+    .stage[aria-pressed="true"] {
+      background: var(--void);
+      color: var(--paper);
+    }
+    .stage[aria-pressed="true"] .stage-num,
+    .stage[aria-pressed="true"] .stage-cost { color: var(--paper); opacity: 0.7; }
+    .stage[data-highlighted="true"]::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--void);
+    }
+    .stage-num {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: lowercase;
+      color: var(--smoke-300);
+      margin-bottom: 8px;
+    }
+    .stage-name {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-size: 20px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    .stage-cost {
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--smoke-300);
+    }
+
+    /* Two-column detail layout */
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 48px;
+      margin-top: 48px;
+    }
+    @media (max-width: 900px) {
+      .columns { grid-template-columns: 1fr; }
+    }
+
+    /* Detail panel */
+    .panel {
+      min-height: 380px;
+    }
+    .panel h2 { margin-bottom: 8px; }
+    .panel .eyebrow { margin-bottom: 10px; }
+    .panel .sentence {
+      font-size: 17px;
+      line-height: 1.5;
+      max-width: 640px;
+      margin: 0 0 28px 0;
+    }
+    .panel .section { margin-bottom: 22px; }
+    .panel .section h3 {
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      font-style: normal;
+      font-weight: 600;
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .panel .section p { margin: 0; color: var(--ink); }
+    .panel ul { margin: 4px 0 0; padding-left: 18px; color: var(--ink); }
+    .panel ul li { margin-bottom: 4px; }
+    code {
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 12px;
+      background: var(--smoke-100);
+      padding: 2px 6px;
+      border-radius: 2px;
+      color: var(--ink);
+    }
+    .principle-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .chip {
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--paper);
+      color: var(--ink);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .chip:hover { background: var(--smoke-100); }
+    .chip[aria-pressed="true"] {
+      background: var(--void);
+      color: var(--paper);
+      border-color: var(--void);
+    }
+
+    /* Side rail */
+    aside.rail {
+      border-left: 1px solid var(--rule);
+      padding-left: 32px;
+    }
+    @media (max-width: 900px) {
+      aside.rail { border-left: none; padding-left: 0; border-top: 1px solid var(--rule); padding-top: 32px; }
+    }
+    aside.rail h3 { margin-bottom: 12px; }
+    aside.rail .principle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .principle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-top: 1px solid var(--rule);
+      cursor: pointer;
+      background: transparent;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+    .principle-row:last-child { border-bottom: 1px solid var(--rule); }
+    .principle-row:hover .principle-row-name { color: var(--void); }
+    .principle-row[aria-pressed="true"] {
+      background: var(--void);
+      color: var(--paper);
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    .principle-row[aria-pressed="true"] .principle-row-name {
+      font-style: italic;
+      font-family: 'Playfair Display', serif;
+    }
+    .principle-row-name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .principle-row-num {
+      font-size: 11px;
+      color: var(--smoke-300);
+      letter-spacing: 0.1em;
+    }
+    .principle-row[aria-pressed="true"] .principle-row-num {
+      color: var(--paper); opacity: 0.7;
+    }
+
+    footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); }
+    footer .row { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; color: var(--smoke-300); }
+    footer a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule); }
+    footer a:hover { border-bottom-color: var(--void); }
+
+    .reset-hint { font-size: 11px; color: var(--smoke-300); margin-top: 14px; letter-spacing: 0.05em; }
+    .key { padding: 1px 5px; border: 1px solid var(--rule); border-radius: 2px; font-family: 'SF Mono', monospace; font-size: 10px; color: var(--ink); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <header class="spread">
+      <div class="eyebrow">the-edit · architecture</div>
+      <h1>a deterministic workflow,<br/>not an autonomous agent.</h1>
+      <p class="deck">eight stages, two providers, twelve principles. one weekly magazine issue under $1.60. click any stage for the mechanism. click any principle to see where it lives.</p>
+    </header>
+
+    <!-- Pipeline -->
+    <nav class="pipeline" aria-label="pipeline stages">
+      <button class="stage" data-stage="research" aria-pressed="false">
+        <div class="stage-num">01</div>
+        <div class="stage-name">research</div>
+        <div class="stage-cost">~$0.25</div>
+      </button>
+      <button class="stage" data-stage="rank" aria-pressed="false">
+        <div class="stage-num">02</div>
+        <div class="stage-name">rank</div>
+        <div class="stage-cost">~$0.025</div>
+      </button>
+      <button class="stage" data-stage="edit" aria-pressed="false">
+        <div class="stage-num">03</div>
+        <div class="stage-name">edit</div>
+        <div class="stage-cost">~$0.031</div>
+      </button>
+      <button class="stage" data-stage="prompt" aria-pressed="false">
+        <div class="stage-num">04</div>
+        <div class="stage-name">prompt</div>
+        <div class="stage-cost">~$0.040</div>
+      </button>
+      <button class="stage" data-stage="qa" aria-pressed="false">
+        <div class="stage-num">05</div>
+        <div class="stage-name">qa</div>
+        <div class="stage-cost">~$0.020</div>
+      </button>
+      <button class="stage" data-stage="imagine" aria-pressed="false">
+        <div class="stage-num">06</div>
+        <div class="stage-name">imagine</div>
+        <div class="stage-cost">~$1.42</div>
+      </button>
+      <button class="stage" data-stage="pick" aria-pressed="false">
+        <div class="stage-num">07</div>
+        <div class="stage-name">pick</div>
+        <div class="stage-cost">$0</div>
+      </button>
+      <button class="stage" data-stage="publish" aria-pressed="false">
+        <div class="stage-num">08</div>
+        <div class="stage-name">publish</div>
+        <div class="stage-cost">$0</div>
+      </button>
+    </nav>
+    <p class="reset-hint">total per issue: <strong>~$1.20 archive hit · ~$1.60 fresh trend · $4.00 hard cap</strong>. <span class="key">esc</span> to clear selection.</p>
+
+    <div class="columns">
+      <!-- Detail panel -->
+      <section class="panel" id="panel" aria-live="polite">
+        <div class="eyebrow" id="panel-eyebrow">overview</div>
+        <h2 id="panel-title">the pipeline</h2>
+        <p class="sentence" id="panel-sentence">
+          deterministic typescript workflow. eight stages run in order with two human approval gates. anthropic claude sonnet 4.6 for all text; google gemini for images. every stage writes to <code>magazine_run_steps</code>, so any failed run can be resumed from disk.
+        </p>
+        <div class="section">
+          <h3>click a stage above</h3>
+          <p>each stage reveals: what it does, where it lives in the repo, which ai principles it applies, the cost, and the failure modes that bit us.</p>
+        </div>
+        <div class="section">
+          <h3>or click a principle on the right</h3>
+          <p>each principle reveals: the one-sentence answer, the mechanism, and which stages use it (highlighted in the pipeline).</p>
+        </div>
+      </section>
+
+      <!-- Principles rail -->
+      <aside class="rail">
+        <div class="eyebrow">principles</div>
+        <h3 class="lowercase" style="margin-bottom:14px">twelve, in order of leverage.</h3>
+        <div class="principle-list" id="principle-list"></div>
+        <p class="reset-hint">deep-dive: see <a href="principles.md" style="color:inherit">principles.md</a>.</p>
+      </aside>
+    </div>
+
+    <footer>
+      <div class="row">
+        <span>the-edit · weekly magazine pipeline</span>
+        <span><a href="principles.md">principles.md</a> · the deep-dive</span>
+        <span><a href="drill-cards.md">drill-cards.md</a> · live-answer format</span>
+        <span><a href="../AI_PM_INTERVIEW_QA.md">AI_PM_INTERVIEW_QA.md</a> · the existing q&a</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // ── Data ─────────────────────────────────────────────────────────────
+    const STAGES = {
+      research: {
+        num: '01', name: 'research', cost: '~$0.247 (fresh) · ~$0.05 (archive hit)',
+        sentence: 'web search via anthropic\'s web_search tool (max 3 queries), then structures results into typed trend candidates. archive lookup runs first — if ≥15 fresh sources exist in magazine_search_archive, skip the web search entirely.',
+        files: ['src/executors/research.ts', 'src/lib/archive.ts'],
+        principles: ['caching', 'grounding', 'structured', 'caps', 'salvage', 'archive', 'streaming'],
+        whatWorks: 'logs cache_read / cache_creation token counts per call. fresh-trend cost $0.27; archive-hit cost $0.05.',
+        whatBreaks: 'a single byte change in the cached prefix voids the cache. timestamps, run IDs, whitespace drift — all kill it silently.',
+      },
+      rank: {
+        num: '02', name: 'rank', cost: '~$0.025',
+        sentence: 'scores each candidate on return signal / styling usefulness / visual feasibility / brand fit, picks one winner, defines three distinct story angles. emits zod-validated rankedissue.',
+        files: ['src/executors/rank.ts'],
+        principles: ['structured', 'caps'],
+        whatWorks: 'rankedissueschema (rank.ts:9-29) enforces winner + 4 score axes (0-10) + ≥2 rejected trends with reasons.',
+        whatBreaks: 'tie-break in scoring is implicit. if two trends score identically, the model picks one — non-deterministic. fine in practice; flagged for documentation.',
+      },
+      edit: {
+        num: '03', name: 'edit', cost: '~$0.031',
+        sentence: 'drafts the full magazine issue — cover headline + concept + 3 trend cards + 1-3 curator cards — in editorial voice. enforces the four headline patterns from DESIGN.md §5.5 directly in the system prompt.',
+        files: ['src/executors/edit.ts'],
+        principles: ['grounding', 'structured', 'orchestration'],
+        whatWorks: 'caught fake "lacoste fw26" reference in early-week issue via QA pass; revise verdict, rewrite, ship.',
+        whatBreaks: 'if research sources are stale (>7 days from archive), edit can write declaratively from now-outdated material and QA can\'t catch it.',
+      },
+      prompt: {
+        num: '04', name: 'prompt', cost: '~$0.040',
+        sentence: 'generates nano banana + kling asset prompts: 2 cover slots, 3 trend slots, 1-3 curator slots. validates inline against banned composition tokens (flat-lay, top-down, gradient, brand logos, anatomical close-ups).',
+        files: ['src/executors/prompt.ts'],
+        principles: ['grounding', 'structured', 'orchestration'],
+        whatWorks: 'pre-qa deterministic validation (regex with negation-stripping) catches violations before paying for QA on them. fallback slot generation for schema failures.',
+        whatBreaks: 'banned-token regex is naive. "no top-down" passes; "an aerial perspective" doesn\'t trigger the ban. mitigated by QA seeing the same prompts.',
+      },
+      qa: {
+        num: '05', name: 'qa', cost: '~$0.109 first run · ~$0.020 cache read',
+        sentence: 'evaluates issue draft + asset prompts against the vogue test, bans, claim grounding, asset compliance, accessibility, and budget. returns one of three verdicts: approve / revise / reject. caches the full ~21K-token DESIGN.md as ephemeral prefix.',
+        files: ['src/executors/qa.ts', 'src/lib/context.ts'],
+        principles: ['caching', 'grounding', 'evals', 'structured', 'orchestration'],
+        whatWorks: 'verdict enum is exactly 3 values. no "uncertain" hedge. qa is told to fail only on hard ship blockers; subjective polish is not a fail.',
+        whatBreaks: 'qa prompt drift toward leniency. lock the system prompt under code review like a security policy.',
+      },
+      imagine: {
+        num: '06', name: 'imagine', cost: '~$1.42 (28 variants)',
+        sentence: 'generates 4 variants per slot via gemini — pro for cover ($0.10/image), flash for cards ($0.039/image). per-slot demographic rotation across 6 reference identities for representation breadth.',
+        files: ['src/executors/imagine.ts', 'src/scripts/basics.ts'],
+        principles: ['caps', 'salvage', 'retry', 'routing', 'multimodal'],
+        whatWorks: 'pro/flash routing saves 44% vs all-pro with no quality drop on covers. retry+fallback survived every 503 we\'ve seen.',
+        whatBreaks: 'pro fallback to flash on a cover invalidates the routing intent. surface fallback in the picker UI so the human can choose to retry pro before publish.',
+      },
+      pick: {
+        num: '07', name: 'pick', cost: '$0',
+        sentence: 'human selects one of 4 variants per slot. CLI (quick look) or admin web UI (apps/admin). picked variants get is_chosen=true in magazine_image_variants.',
+        files: ['src/scripts/pick.ts', 'apps/admin/app/runs/[runId]/page.tsx'],
+        principles: ['orchestration', 'multimodal'],
+        whatWorks: 'human judgment is structurally appropriate here — visual taste, not eval. the human is faster and better at this than any model.',
+        whatBreaks: 'pick blocks the pipeline. if no human picks, no publish. dashboard surfaces unpicked runs.',
+      },
+      publish: {
+        num: '08', name: 'publish', cost: '$0',
+        sentence: 'assembles approved draft + picked variants + research sources into a magazineissuemanifest. writes to magazine_issue_manifests + app-safe issue_payload (no prompts, no service-role keys, no cost details).',
+        files: ['src/executors/publish.ts', 'src/scripts/publish.ts'],
+        principles: ['orchestration'],
+        whatWorks: 'app-safe payload isolation. the public /api/issues/latest endpoint serves only the curated fields. raw prompts and run internals stay private.',
+        whatBreaks: 'manifest shape drift between writer and reader. zod schemas on both sides keep them in lockstep.',
+      },
+    };
+
+    const PRINCIPLES = {
+      caching: {
+        num: '01', name: 'prompt caching',
+        sentence: 'cached prefix processed once per ttl on the provider side, charged at 10% on subsequent calls. tokens still travel; billing + prefill compute is what changes.',
+        stages: ['research', 'qa'],
+        mechanism: 'cachecontrol marker on the system block. anthropic hashes the prefix bytes, stores tokenized representation, keys cache entry by hash. cache_read_input_tokens in the response is the proof.',
+      },
+      grounding: {
+        num: '02', name: 'anti-hallucination (grounding)',
+        sentence: 'edit writes from cited sources only; QA verifies every claim against the source bundle. caught a fake Lacoste reference in an early issue.',
+        stages: ['research', 'edit', 'prompt', 'qa'],
+        mechanism: 'web_search_20260209 tool with max_uses:3 in research. trendcandidate[] with URLs + snippets passed through. qareportschema.unsupportedclaims forces verification at the gate.',
+      },
+      structured: {
+        num: '03', name: 'structured outputs (zod)',
+        sentence: 'every llm call validated against a zod schema. repair-text hook on parse failure, one bounded strict retry on schema failure, then throw.',
+        stages: ['research', 'rank', 'edit', 'prompt', 'qa'],
+        mechanism: 'generateobjectwithrepair() wrapper. experimental_repairtext extracts JSON from prose. catch-block does one strict-retry with the error in the user message.',
+      },
+      evals: {
+        num: '04', name: 'eval gate (qa verdict)',
+        sentence: 'second llm call evaluates first llm\'s output against fixed rubric before expensive downstream work fires. three-way verdict the orchestrator branches on.',
+        stages: ['qa'],
+        mechanism: 'verdict: approve | revise | reject. approve → continue. revise → re-run edit with revisionrequirements injected. reject → abort.',
+      },
+      caps: {
+        num: '05', name: 'cost caps (three-axis)',
+        sentence: 'three independent caps — text generation, web search, image generation — so a runaway in one doesn\'t drain budget on the others.',
+        stages: ['research', 'rank', 'edit', 'prompt', 'qa', 'imagine'],
+        mechanism: 'recordcost / recordwebsearchcost / recordimaginecost in src/lib/cost.ts. hard cap $4.00 throws. soft caps fire salvage.',
+      },
+      salvage: {
+        num: '06', name: 'salvage-on-cap',
+        sentence: 'when a soft cap fires mid-run, stop doing new work but keep + return what you have. partial data > failed run.',
+        stages: ['research', 'imagine'],
+        mechanism: 'research.ts:243-254 keeps gathered sources, only throws if zero. imagine.ts:252-258 stops between slots, keeps uploaded variants.',
+      },
+      retry: {
+        num: '07', name: 'retry + exponential backoff',
+        sentence: 'transient failures retry with increasing delays. caps prevent infinite loops. tier fallback (pro → flash) on persistent overload.',
+        stages: ['research', 'imagine'],
+        mechanism: '3 attempts at [3s, 6s, 12s] for gemini gen, then fall through to flash tier. [1s, 4s, 16s] for storage uploads after generation.',
+      },
+      routing: {
+        num: '08', name: 'hybrid model routing',
+        sentence: 'pro for cover (hero impression), flash for cards (supporting role). 44% imagine savings vs all-pro with no quality loss where it matters.',
+        stages: ['imagine'],
+        mechanism: 'model_by_slot_prefix table in imagine.ts:18-22. per-slot model selection. costs tracked per image so the routing distribution is visible after the fact.',
+      },
+      orchestration: {
+        num: '09', name: 'deterministic orchestration',
+        sentence: 'fixed sequence of named stages with two human approval gates. no llm-as-orchestrator. every run looks the same in the database.',
+        stages: ['edit', 'prompt', 'qa', 'pick', 'publish'],
+        mechanism: 'src/orchestrator/index.ts is a flat sequencer. each stage writes to magazine_run_steps before returning, so any stage can be resumed from disk.',
+      },
+      archive: {
+        num: '10', name: 'search archive (cheap rag)',
+        sentence: 'every search result stored in magazine_search_archive with trend keywords + last_seen_at. next run\'s research checks first; ≥15 fresh hits = skip web search entirely.',
+        stages: ['research'],
+        mechanism: 'gin index on trend_keywords array. findfreshsources() does keyword overlap + 7-day recency filter. cost-per-issue 25% lower in steady state.',
+      },
+      multimodal: {
+        num: '11', name: 'multimodal generation',
+        sentence: 'text + image as separate budgets, separate failure modes. prompt-to-image handoff validates banned tokens before paying for the image.',
+        stages: ['prompt', 'imagine', 'pick'],
+        mechanism: 'two providers, two cost axes, two retry strategies. validation in prompt.ts catches violations before they reach gemini. pick happens in human-land.',
+      },
+      streaming: {
+        num: '12', name: 'streaming (latency / timeout)',
+        sentence: 'messages.stream() instead of messages.create() keeps the http connection alive past proxy idle timeouts. same cost, same response, no more timeouts.',
+        stages: ['research'],
+        mechanism: 'server-sent events keep the pipe open during 90+s research calls. .finalmessage() resolves once stream completes. ~15% timeout rate → 0%.',
+      },
+    };
+
+    // ── Render ───────────────────────────────────────────────────────────
+    const panelEyebrow = document.getElementById('panel-eyebrow');
+    const panelTitle   = document.getElementById('panel-title');
+    const panelSentence= document.getElementById('panel-sentence');
+    const panel        = document.getElementById('panel');
+    const principleList= document.getElementById('principle-list');
+
+    let selectedStage     = null;
+    let selectedPrinciple = null;
+
+    // build principle rail
+    Object.entries(PRINCIPLES).forEach(([id, p]) => {
+      const btn = document.createElement('button');
+      btn.className = 'principle-row';
+      btn.dataset.principle = id;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.innerHTML = `
+        <span class="principle-row-name">${p.name}</span>
+        <span class="principle-row-num">${p.num}</span>
+      `;
+      btn.addEventListener('click', () => selectPrinciple(id));
+      principleList.appendChild(btn);
+    });
+
+    function clearStageHighlights() {
+      document.querySelectorAll('.stage').forEach(s => s.removeAttribute('data-highlighted'));
+    }
+
+    function clearSelections() {
+      selectedStage = null;
+      selectedPrinciple = null;
+      document.querySelectorAll('.stage').forEach(s => s.setAttribute('aria-pressed', 'false'));
+      document.querySelectorAll('.principle-row').forEach(p => p.setAttribute('aria-pressed', 'false'));
+      clearStageHighlights();
+      renderOverview();
+    }
+
+    function renderOverview() {
+      panelEyebrow.textContent = 'overview';
+      panelTitle.textContent = 'the pipeline';
+      panel.innerHTML = `
+        <div class="eyebrow" id="panel-eyebrow">overview</div>
+        <h2 id="panel-title">the pipeline</h2>
+        <p class="sentence" id="panel-sentence">
+          deterministic typescript workflow. eight stages run in order with two human approval gates. anthropic claude sonnet 4.6 for all text; google gemini for images. every stage writes to <code>magazine_run_steps</code>, so any failed run can be resumed from disk.
+        </p>
+        <div class="section">
+          <h3>click a stage above</h3>
+          <p>each stage reveals: what it does, where it lives in the repo, which principles it applies, cost, and the failure modes that bit us.</p>
+        </div>
+        <div class="section">
+          <h3>or click a principle on the right</h3>
+          <p>each principle reveals: the one-sentence answer, the mechanism, and which stages use it (highlighted in the pipeline).</p>
+        </div>
+      `;
+    }
+
+    function selectStage(id) {
+      // toggle off if already selected
+      if (selectedStage === id) { clearSelections(); return; }
+      // clear principle
+      document.querySelectorAll('.principle-row').forEach(p => p.setAttribute('aria-pressed', 'false'));
+      selectedPrinciple = null;
+      clearStageHighlights();
+      // toggle on
+      document.querySelectorAll('.stage').forEach(s => s.setAttribute('aria-pressed', s.dataset.stage === id ? 'true' : 'false'));
+      selectedStage = id;
+      const s = STAGES[id];
+      const principleNames = s.principles.map(pid => PRINCIPLES[pid].name);
+      panel.innerHTML = `
+        <div class="eyebrow">stage ${s.num}</div>
+        <h2>${s.name}</h2>
+        <p class="sentence">${s.sentence}</p>
+        <div class="section">
+          <h3>cost</h3>
+          <p>${s.cost}</p>
+        </div>
+        <div class="section">
+          <h3>files</h3>
+          <ul>${s.files.map(f => `<li><code>${f}</code></li>`).join('')}</ul>
+        </div>
+        <div class="section">
+          <h3>principles applied</h3>
+          <div class="principle-chips">
+            ${s.principles.map((pid, i) => `<button class="chip" data-jump="${pid}" aria-pressed="false">${PRINCIPLES[pid].name}</button>`).join('')}
+          </div>
+        </div>
+        <div class="section">
+          <h3>proof it worked</h3>
+          <p>${s.whatWorks}</p>
+        </div>
+        <div class="section">
+          <h3>what silently breaks it</h3>
+          <p>${s.whatBreaks}</p>
+        </div>
+      `;
+      // wire chip jumps
+      panel.querySelectorAll('.chip[data-jump]').forEach(c => {
+        c.addEventListener('click', () => selectPrinciple(c.dataset.jump));
+      });
+    }
+
+    function selectPrinciple(id) {
+      // toggle off
+      if (selectedPrinciple === id) { clearSelections(); return; }
+      // clear stage
+      document.querySelectorAll('.stage').forEach(s => s.setAttribute('aria-pressed', 'false'));
+      selectedStage = null;
+      // toggle on
+      document.querySelectorAll('.principle-row').forEach(p => p.setAttribute('aria-pressed', p.dataset.principle === id ? 'true' : 'false'));
+      selectedPrinciple = id;
+      const p = PRINCIPLES[id];
+      // highlight stages that use this principle
+      clearStageHighlights();
+      p.stages.forEach(sid => {
+        const el = document.querySelector(`.stage[data-stage="${sid}"]`);
+        if (el) el.setAttribute('data-highlighted', 'true');
+      });
+      panel.innerHTML = `
+        <div class="eyebrow">principle ${p.num}</div>
+        <h2>${p.name}</h2>
+        <p class="sentence">${p.sentence}</p>
+        <div class="section">
+          <h3>mechanism</h3>
+          <p>${p.mechanism}</p>
+        </div>
+        <div class="section">
+          <h3>where it lives</h3>
+          <div class="principle-chips">
+            ${p.stages.map(sid => `<button class="chip" data-jump-stage="${sid}" aria-pressed="false">${STAGES[sid].name}</button>`).join('')}
+          </div>
+        </div>
+        <div class="section">
+          <h3>more depth</h3>
+          <p>see <code>principles.md</code> § ${p.num}. mechanism-first walkthrough with code citations, proof, failure modes, and the follow-up question a sharp hiring manager will ask.</p>
+        </div>
+      `;
+      panel.querySelectorAll('.chip[data-jump-stage]').forEach(c => {
+        c.addEventListener('click', () => selectStage(c.dataset.jumpStage));
+      });
+    }
+
+    // wire stage clicks
+    document.querySelectorAll('.stage').forEach(s => {
+      s.addEventListener('click', () => selectStage(s.dataset.stage));
+    });
+
+    // esc to clear
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') clearSelections();
+    });
+  </script>
+</body>
+</html>

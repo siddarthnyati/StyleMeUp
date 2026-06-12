@@ -2,6 +2,32 @@
 
 Historical note: entries below 2026-05-04 02:03 PM ET are backfilled from git history and `MODEL_HANDOFF.md`. They capture milestone-level changes and decisions, not every small edit.
 
+## 2026-05-18 (Onboarding redesign Phases 4/3/5 + strategy doc)
+
+- Changed:
+  - Rebuilt the first-fit audience picker as a Magazine cover: void canvas, three full-bleed hero columns (man | woman | non-binary) from `wardrobe-basics/firstfit/`, captions sourced from `lib/firstFitHeroes.ts` — fixing the bug where man and woman shared the same caption.
+  - Replaced the Signal-red selection checkmark with a register flip: marked variant tiles ink to void with paper type (DESIGN.md §1.5), 180ms web transition.
+  - Replaced the 3-thumbnail category preview row with one editorial hero photograph per category, card chrome removed; added `sizing.starterCategoryHeroHeight` token.
+  - Wrote `PRODUCT_STRATEGY.md` — user gaps, retention mechanics, feature + technical differentiation, 6-week sequence.
+  - Track B: added plain-English openers to all 12 principles in `learning/the-edit-architecture/principles.md` and a 50-term jargon decoder appendix to `glossary.md`.
+  - Restored the paused Supabase project (`drip` was INACTIVE — all public image URLs and the Discover API were down) and re-uploaded the regenerated single-view `men/black-leather-jacket-men.png`.
+- Why:
+  - The onboarding screens were the weakest surface in the product and the redesign assets (hero plates, expanded photo catalog, claude.design layouts) were already paid for and waiting.
+  - The strategy doc grounds the next build phases in what the code actually contains.
+- Affected:
+  - `screens/Onboarding/Identity.tsx`
+  - `components/StarterPack/StarterPackExplorer.tsx`
+  - `tokens/sizing.ts`
+  - `PRODUCT_STRATEGY.md`, `NEXT_STEPS.md`
+  - `learning/the-edit-architecture/principles.md`, `learning/the-edit-architecture/glossary.md`
+- Verification:
+  - `npx tsc --noEmit` clean after each phase; phases committed separately (`49d062a`, `fbcd309`, `03f4334`).
+  - Public image URLs verified 200 after project restore (firstfit hero + re-uploaded jacket).
+  - Pending: human visual pass on device-sized Expo web (photos render full-bleed; SVG-fallback scale on `categoryHero` may need a nudge).
+- Next:
+  - Sid decision: Codex editorial-list vs photo-forward for "what you already own."
+  - expo-image migration for remote photos; real camera capture; daily look ritual (see `PRODUCT_STRATEGY.md` §5).
+
 ## 2026-05-14 (Magazine new issue badge)
 
 - Changed:
