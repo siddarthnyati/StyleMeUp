@@ -597,14 +597,9 @@ export function StarterPackExplorer({
                 >
                   <StarterGarmentImage accessible={false} item={variant} size="variant" />
                   <View style={styles.variantCopy}>
-                    <Text style={styles.variantLabel}>{variant.label}</Text>
-                    <Text style={styles.variantDetail}>{variant.detail}</Text>
+                    <Text style={[styles.variantLabel, isSelected && styles.variantLabelSelected]}>{variant.label}</Text>
+                    <Text style={[styles.variantDetail, isSelected && styles.variantDetailSelected]}>{variant.detail}</Text>
                   </View>
-                  {isSelected ? (
-                    <View style={[styles.selectedMark, styles.pointerEventsNone]}>
-                      <View style={styles.selectedCheck} />
-                    </View>
-                  ) : null}
                 </a>
               ) : (
                 <Pressable
@@ -617,14 +612,9 @@ export function StarterPackExplorer({
                 >
                   <StarterGarmentImage accessible={false} item={variant} size="variant" />
                   <View style={styles.variantCopy}>
-                    <Text style={styles.variantLabel}>{variant.label}</Text>
-                    <Text style={styles.variantDetail}>{variant.detail}</Text>
+                    <Text style={[styles.variantLabel, isSelected && styles.variantLabelSelected]}>{variant.label}</Text>
+                    <Text style={[styles.variantDetail, isSelected && styles.variantDetailSelected]}>{variant.detail}</Text>
                   </View>
-                  {isSelected ? (
-                    <View style={[styles.selectedMark, styles.pointerEventsNone]}>
-                      <View style={styles.selectedCheck} />
-                    </View>
-                  ) : null}
                 </Pressable>
               );
             })}
@@ -1104,9 +1094,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bone,
     padding: spacing[3],
   },
+  // Selection is a register flip (DESIGN.md §1.5): the whole tile inks in,
+  // type goes paper. The garment photo stays photo — only the surround flips.
   variantCardSelected: {
     borderColor: colors.ink,
-    backgroundColor: colors.paper,
+    backgroundColor: colors.ink,
   },
   variantImage: {
     width: sizing.starterVariantImage,
@@ -1131,25 +1123,11 @@ const styles = StyleSheet.create({
     letterSpacing: type.micro.letterSpacing,
     lineHeight: type.micro.lineHeight,
   },
-  selectedMark: {
-    position: 'absolute',
-    top: spacing[3],
-    right: spacing[3],
-    width: sizing.starterConfirmationDot,
-    height: sizing.starterConfirmationDot,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: colors.signal,
+  variantLabelSelected: {
+    color: colors.paper,
   },
-  selectedCheck: {
-    width: sizing.starterCheckmark.size,
-    height: sizing.starterCheckmark.lineHeight,
-    borderLeftColor: colors.paper,
-    borderBottomColor: colors.paper,
-    borderLeftWidth: sizing.starterCheckmark.stroke,
-    borderBottomWidth: sizing.starterCheckmark.stroke,
-    transform: [{ rotate: '-45deg' }, { translateY: -1 }],
+  variantDetailSelected: {
+    color: colors.smoke[200],
   },
   pointerEventsNone: {
     pointerEvents: 'none',
@@ -1279,13 +1257,14 @@ function getWebVariantButtonStyle(isSelected: boolean): CSSProperties {
     borderStyle: 'solid',
     borderWidth: sizing.hairline,
     borderColor: isSelected ? colors.ink : colors.smoke[200],
-    background: isSelected ? colors.paper : colors.bone,
+    background: isSelected ? colors.ink : colors.bone,
     cursor: 'pointer',
     appearance: 'none',
     WebkitAppearance: 'none',
-    color: colors.ink,
+    color: isSelected ? colors.paper : colors.ink,
     textDecoration: 'none',
     textAlign: 'left',
+    transition: 'background-color 180ms ease-out, color 180ms ease-out, border-color 180ms ease-out',
   };
 }
 
