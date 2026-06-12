@@ -32,6 +32,7 @@ export const sizing = {
   },
   starterCategoryCardWidth: 132,
   starterCategoryImage: 52,
+  starterCategoryHeroHeight: 168,
   starterHeroImage: 148,
   starterVariantCardHeight: 208,
   starterVariantImage: 88,

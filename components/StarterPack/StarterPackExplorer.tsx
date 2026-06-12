@@ -9,7 +9,7 @@ import { getWardrobeBasicsPhotoUrl, pickPhotoFirstVariants } from '@/lib/wardrob
 
 export type StarterCategoryKey = 'tshirts' | 'jeans' | 'shoes' | 'accessories' | 'boots' | 'jackets';
 export type StarterShape = 'tee' | 'jeans' | 'sneaker' | 'loafer' | 'boot' | 'cap' | 'belt' | 'bag' | 'jacket';
-export type StarterImageSize = 'hero' | 'preview' | 'variant' | 'closetHero' | 'closetRail' | 'categoryThumb';
+export type StarterImageSize = 'hero' | 'preview' | 'variant' | 'closetHero' | 'closetRail' | 'categoryHero';
 export type StarterGender = 'man' | 'woman' | 'unisex';
 
 export type StarterVariant = {
@@ -287,8 +287,8 @@ export function StarterGarmentImage({
           ? styles.closetHeroImage
           : size === 'closetRail'
             ? styles.closetRailImage
-            : size === 'categoryThumb'
-              ? styles.categoryThumbImage
+            : size === 'categoryHero'
+              ? styles.categoryHeroImage
               : styles.variantImage;
 
   return (
@@ -527,21 +527,13 @@ export function StarterPackExplorer({
         {!activeCategory ? (
           <View style={styles.categoryGrid}>
             {audienceCategories.map((category) => {
-              const previews = pickPhotoFirstVariants(category.variants, audienceIdentity, 3);
+              // One decisive image per category — the strongest photographed
+              // variant for this rail. The photograph is the icon (§8).
+              const heroVariant = pickPhotoFirstVariants(category.variants, audienceIdentity, 1)[0] ?? category.variants[0];
               const markedCount = categoryCounts.find((count) => count.key === category.key)?.count ?? 0;
               const categoryMeta = markedCount > 0
                 ? `${markedCount} marked · ${category.variants.length} options`
                 : `${category.variants.length} options`;
-
-              const previewRow = (
-                <View style={styles.categoryPreviewRow}>
-                  {previews.map((p, i) => (
-                    <View key={p.id} style={i > 0 ? styles.categoryPreviewSlotSpaced : undefined}>
-                      <StarterGarmentImage accessible={false} item={p} size="categoryThumb" />
-                    </View>
-                  ))}
-                </View>
-              );
 
               return usesWebLinks ? (
                 <a
@@ -552,9 +544,9 @@ export function StarterPackExplorer({
                   })}
                   key={category.key}
                   role="button"
-                  style={getWebCategoryButtonStyle(false)}
+                  style={getWebCategoryButtonStyle()}
                 >
-                  {previewRow}
+                  {heroVariant ? <StarterGarmentImage accessible={false} item={heroVariant} size="categoryHero" /> : null}
                   <View style={styles.categoryCopy}>
                     <Text style={styles.categoryLabel}>{category.label}</Text>
                     <Text style={styles.categoryMeta}>{categoryMeta}</Text>
@@ -568,7 +560,7 @@ export function StarterPackExplorer({
                   onPress={() => selectCategory(category.key)}
                   style={styles.categoryCard}
                 >
-                  {previewRow}
+                  {heroVariant ? <StarterGarmentImage accessible={false} item={heroVariant} size="categoryHero" /> : null}
                   <View style={styles.categoryCopy}>
                     <Text style={styles.categoryLabel}>{category.label}</Text>
                     <Text style={styles.categoryMeta}>{categoryMeta}</Text>
@@ -743,24 +735,14 @@ const styles = StyleSheet.create({
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing[2],
+    rowGap: spacing[6],
+    columnGap: spacing[4],
   },
+  // Editorial cell, not a card (§4 bans the chrome): the photograph bleeds
+  // into the paper canvas, copy sits below, whitespace does the separation.
   categoryCard: {
     width: '47%',
-    minHeight: sizing.starterDepartmentCardHeight,
-    justifyContent: 'space-between',
-    borderColor: colors.smoke[200],
-    borderRadius: radius.xs,
-    borderWidth: sizing.hairline,
-    backgroundColor: colors.bone,
-    padding: spacing[3],
-  },
-  categoryCardWrapped: {
-    width: '48%',
-  },
-  categoryCardActive: {
-    borderColor: colors.ink,
-    backgroundColor: colors.paper,
+    gap: spacing[2],
   },
   previewImage: {
     width: sizing.starterCategoryImage,
@@ -971,17 +953,9 @@ const styles = StyleSheet.create({
   categoryCopy: {
     gap: spacing[1],
   },
-  categoryPreviewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  categoryPreviewSlotSpaced: {
-    marginLeft: spacing[2],
-  },
-  categoryThumbImage: {
-    width: 56,
-    height: 56,
+  categoryHeroImage: {
+    width: '100%',
+    height: sizing.starterCategoryHeroHeight,
     alignSelf: 'center',
   },
   categoryLabel: {
@@ -1202,26 +1176,18 @@ const shapeStageStyles = StyleSheet.create({
   closetRail: {
     transform: [{ scale: 0.76 }],
   },
-  categoryThumb: {
-    transform: [{ scale: 0.62 }],
+  categoryHero: {
+    transform: [{ scale: 1.15 }],
   },
 });
 
-function getWebCategoryButtonStyle(isActive: boolean): CSSProperties {
+function getWebCategoryButtonStyle(): CSSProperties {
   return {
     width: '46%',
-    minHeight: sizing.starterDepartmentCardHeight,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between',
     boxSizing: 'border-box',
     gap: spacing[2],
-    padding: spacing[3],
-    borderRadius: radius.xs,
-    borderStyle: 'solid',
-    borderWidth: sizing.hairline,
-    borderColor: isActive ? colors.ink : colors.smoke[200],
-    background: isActive ? colors.paper : colors.bone,
     cursor: 'pointer',
     appearance: 'none',
     WebkitAppearance: 'none',
