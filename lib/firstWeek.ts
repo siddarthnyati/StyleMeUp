@@ -1,7 +1,5 @@
-import { Platform } from 'react-native';
-import { createMMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import type { StateStorage } from 'zustand/middleware';
 import { createJSONStorage, persist } from 'zustand/middleware.js';
 
 import {
@@ -140,57 +138,11 @@ function migrateFirstWeekState(persistedState: unknown) {
   };
 }
 
-let nativeStorage: ReturnType<typeof createMMKV> | null = null;
-
-function getNativeStorage() {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  nativeStorage ??= createMMKV({ id: 'stylemeup.first-week' });
-
-  return nativeStorage;
-}
-
-function getWebStorage() {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') {
-    return null;
-  }
-
-  return window.localStorage;
-}
-
-const firstWeekStorage: StateStorage = {
-  getItem: (name) => {
-    const webStorage = getWebStorage();
-
-    if (webStorage) {
-      return webStorage.getItem(name);
-    }
-
-    return getNativeStorage()?.getString(name) ?? null;
-  },
-  removeItem: (name) => {
-    const webStorage = getWebStorage();
-
-    if (webStorage) {
-      webStorage.removeItem(name);
-      return;
-    }
-
-    getNativeStorage()?.remove(name);
-  },
-  setItem: (name, value) => {
-    const webStorage = getWebStorage();
-
-    if (webStorage) {
-      webStorage.setItem(name, value);
-      return;
-    }
-
-    getNativeStorage()?.set(name, value);
-  },
-};
+// AsyncStorage works in Expo Go on both native and web (web is backed by
+// localStorage). We moved off react-native-mmkv because MMKV v4 uses Nitro
+// Modules, which Expo Go can't load — it crashed on launch on device.
+// AsyncStorage already satisfies zustand's StateStorage interface.
+const firstWeekStorage = AsyncStorage;
 
 export const signatureByPersona: Record<Persona, Omit<SavedLook, 'savedAt'>> = {
   work: {
