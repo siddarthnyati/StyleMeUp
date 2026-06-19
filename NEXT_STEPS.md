@@ -8,6 +8,18 @@ agnostic. They run in parallel and don't block each other.
 
 ---
 
+## ▶ ACTIVE PRIORITY (2026-05-18): the camera loop
+
+The onboarding redesign (Phases 4/3/5) shipped. The single missing core
+loop is **capture → classify → closet**, and it's the weekend build.
+Full plan with phase gates, taxonomy, classification contract, and the
+deterministic confidence gate lives in **`CAMERA_BUILD_PLAN.md`** — start
+there. Build phase-by-phase, stop for Sid's OK after each.
+
+Everything below is the standing two-track context.
+
+---
+
 ## The two tracks
 
 - **Track A — App.** Finish the onboarding redesign we have mockups for,
