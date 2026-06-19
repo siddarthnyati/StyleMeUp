@@ -3,16 +3,17 @@
  * @design-ref DESIGN.md §1.5, §10 (Capture), §12
  *
  * Phase A: real capture. Native uses expo-camera CameraView; web falls back
- * to a file picker. The photo is downscaled to ~768px (kept with a base64
- * for the Phase B/C classifier) and previewed before saving to the closet.
- * Classification (kind/label/colour) arrives in Phase C — for now the saved
- * piece carries the real photo with a placeholder label.
+ * to a file picker. The captured photo is previewed before saving to the
+ * closet. The shutter is gated on onCameraReady so we never grab a frame
+ * before auto-exposure has settled (that produces near-black images).
+ * Downscale-before-classify moves to Phase B; classification (kind/label/
+ * colour) arrives in Phase C — for now the saved piece carries the real
+ * photo with a placeholder label.
  */
 import { useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { Link, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,12 +25,13 @@ type CaptureStage = 'preface' | 'viewfinder' | 'preview';
 type CapturedImage = { uri: string; base64?: string };
 
 const isWeb = Platform.OS === 'web';
-const TARGET_WIDTH = 768;
 
 export function Capture() {
   const saveCapturedPiece = useFirstWeekStore((state) => state.saveCapturedPiece);
   const [stage, setStage] = useState<CaptureStage>('preface');
   const [captured, setCaptured] = useState<CapturedImage | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -47,23 +49,28 @@ export function Capture() {
       }
     }
 
+    setCameraReady(false);
     setStage('viewfinder');
   }
 
   async function handleShutter() {
-    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.7 });
-    if (!photo?.uri) {
+    // Don't fire until the sensor is configured — capturing too early returns
+    // a near-black, underexposed frame.
+    if (!cameraReady || isCapturing) {
       return;
     }
 
-    const resized = await ImageManipulator.manipulateAsync(
-      photo.uri,
-      [{ resize: { width: TARGET_WIDTH } }],
-      { compress: 0.8, base64: true, format: ImageManipulator.SaveFormat.JPEG },
-    );
-
-    setCaptured({ uri: resized.uri, base64: resized.base64 });
-    setStage('preview');
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 0.85 });
+      if (!photo?.uri) {
+        return;
+      }
+      setCaptured({ uri: photo.uri, base64: photo.base64 });
+      setStage('preview');
+    } finally {
+      setIsCapturing(false);
+    }
   }
 
   function handleWebFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -87,6 +94,7 @@ export function Capture() {
 
   function handleRetake() {
     setCaptured(null);
+    setCameraReady(false);
     setStage(isWeb ? 'preface' : 'viewfinder');
   }
 
@@ -139,16 +147,24 @@ export function Capture() {
               <View style={styles.topSpacer} />
             </View>
 
-            <CameraView facing="back" ref={cameraRef} style={styles.camera} />
+            <CameraView
+              active
+              facing="back"
+              onCameraReady={() => setCameraReady(true)}
+              ref={cameraRef}
+              style={styles.camera}
+            />
 
             <View style={styles.shutterWrap}>
               <Pressable
                 accessibilityLabel="capture one piece"
                 accessibilityRole="button"
+                accessibilityState={{ disabled: !cameraReady }}
+                disabled={!cameraReady || isCapturing}
                 onPress={handleShutter}
                 style={({ pressed }) => [styles.shutterButton, pressed && styles.pressed]}
               >
-                <View style={styles.shutter} />
+                <View style={[styles.shutter, !cameraReady && styles.shutterDisabled]} />
               </Pressable>
             </View>
           </>
@@ -293,6 +309,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: sizing.captureShutterRing,
     backgroundColor: colors.power,
+  },
+  shutterDisabled: {
+    opacity: 0.4,
   },
   previewStage: {
     flex: 1,
