@@ -7,12 +7,19 @@ const DEFAULT_API_URL = 'https://the-edit-lime.vercel.app';
 const VALID_KINDS = new Set<GarmentKind>([
   'tee',
   'oxford',
+  'knit',
+  'dress',
   'denim',
+  'trouser',
+  'shorts',
+  'skirt',
+  'jacket',
+  'coat',
   'sneaker',
   'boot',
-  'jacket',
-  'trouser',
-  'skirt',
+  'heel',
+  'flat',
+  'bag',
   'cap',
 ]);
 

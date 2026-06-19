@@ -148,6 +148,25 @@ export function Closet() {
           ) : null}
         </View>
 
+        {capturedPieces.length > 0 ? (
+          <View style={styles.capturedSection}>
+            <Text style={styles.capturedHeadline}>your pieces.</Text>
+            <View style={styles.capturedGrid}>
+              {capturedPieces.map((piece) => (
+                <View key={piece.id} style={styles.capturedCell}>
+                  <GarmentTile
+                    detail={piece.detail}
+                    imageUri={piece.imageUri}
+                    kind={piece.kind}
+                    label={piece.label}
+                    register="Sanctuary"
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         <BasicsBlock3D />
       </ScrollView>
       <BottomNavigation active="closet" register="Sanctuary" />
@@ -349,6 +368,25 @@ const styles = StyleSheet.create({
     fontSize: type.bodyMd.size,
     fontWeight: type.bodyMd.weight,
     lineHeight: type.bodyMd.lineHeight,
+  },
+  capturedSection: {
+    gap: spacing[3],
+  },
+  capturedHeadline: {
+    color: colors.ink,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.headlineLg.size,
+    fontStyle: 'italic',
+    fontWeight: type.displayMd.weight,
+    lineHeight: type.headlineLg.lineHeight,
+  },
+  capturedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  capturedCell: {
+    width: '48%',
   },
   nextAction: {
     minHeight: sizing.tapTarget,

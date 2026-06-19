@@ -111,6 +111,34 @@ export const sizing = {
       width: 76,
       height: 42,
     },
+    knit: {
+      width: 62,
+      height: 76,
+    },
+    dress: {
+      width: 58,
+      height: 116,
+    },
+    shorts: {
+      width: 58,
+      height: 54,
+    },
+    coat: {
+      width: 84,
+      height: 112,
+    },
+    heel: {
+      width: 72,
+      height: 38,
+    },
+    flat: {
+      width: 74,
+      height: 26,
+    },
+    bag: {
+      width: 60,
+      height: 58,
+    },
   },
 } as const;
 

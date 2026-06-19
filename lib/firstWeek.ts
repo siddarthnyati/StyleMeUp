@@ -22,11 +22,18 @@ export type LookPiece = {
 };
 
 const garmentKindMap: Record<GarmentKind, true> = {
+  bag: true,
   boot: true,
   cap: true,
+  coat: true,
   denim: true,
+  dress: true,
+  flat: true,
+  heel: true,
   jacket: true,
+  knit: true,
   oxford: true,
+  shorts: true,
   skirt: true,
   sneaker: true,
   tee: true,
@@ -48,10 +55,14 @@ export type CapturedPiece = {
   capturedAt: string;
   detail: string;
   id: string;
+  /** Local URI (native file:// or web data URL) of the captured photo. */
+  imageUri?: string;
   kind: GarmentKind;
   label: string;
   pairing: string;
 };
+
+export type CapturedPieceInput = Partial<Pick<CapturedPiece, 'imageUri' | 'kind' | 'label' | 'detail' | 'pairing'>>;
 
 type FirstWeekState = {
   audienceIdentity: AudienceIdentity | null;
@@ -69,7 +80,7 @@ type FirstWeekState = {
   markMagazineIssueSeen: (slug: string) => void;
   markFoundationReceiptSeen: () => void;
   requestFirstSignature: (persona?: Persona) => Promise<void>;
-  saveCapturedPiece: () => void;
+  saveCapturedPiece: (piece?: CapturedPieceInput) => void;
   saveLook: (look: Omit<SavedLook, 'savedAt'>) => void;
   setAudienceIdentity: (identity: AudienceIdentity) => void;
   setLastDressingRoomDate: (date: string) => void;
@@ -614,14 +625,17 @@ export const useFirstWeekStore = create<FirstWeekState>()(
           });
         }
       },
-      saveCapturedPiece: () => {
+      saveCapturedPiece: (piece) => {
         const state = get();
+        // Phase A: the photo is real; the label/kind are placeholders until
+        // the classifier (Phase C) fills them in. A passed-in payload wins.
         const capturedPiece: CapturedPiece = {
           id: `captured-piece-${state.capturedPieces.length + 1}`,
-          label: 'white crew-neck',
-          detail: 'mid-weight cotton. photographed on bone.',
-          kind: 'tee',
-          pairing: 'wear it with dark denim.',
+          label: piece?.label ?? 'captured piece',
+          detail: piece?.detail ?? 'just captured.',
+          kind: piece?.kind ?? 'tee',
+          pairing: piece?.pairing ?? '',
+          imageUri: piece?.imageUri,
           capturedAt: new Date().toISOString(),
         };
         const capturedPieces = [...state.capturedPieces, capturedPiece];

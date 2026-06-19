@@ -1,25 +1,54 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
 
-export type GarmentKind = 'tee' | 'oxford' | 'denim' | 'sneaker' | 'boot' | 'jacket' | 'trouser' | 'skirt' | 'cap';
+export type GarmentKind =
+  | 'tee'
+  | 'oxford'
+  | 'knit'
+  | 'dress'
+  | 'denim'
+  | 'trouser'
+  | 'shorts'
+  | 'skirt'
+  | 'jacket'
+  | 'coat'
+  | 'sneaker'
+  | 'boot'
+  | 'heel'
+  | 'flat'
+  | 'bag'
+  | 'cap';
 
 type GarmentTileProps = {
   label: string;
   kind: GarmentKind;
   register: 'Magazine' | 'Sanctuary';
   detail?: string;
+  /** A captured photo. When present, the tile shows the real piece instead of the silhouette. */
+  imageUri?: string;
 };
 
-export function GarmentTile({ detail, kind, label, register }: GarmentTileProps) {
+export function GarmentTile({ detail, imageUri, kind, label, register }: GarmentTileProps) {
   const isMagazine = register === 'Magazine';
 
   return (
     <View style={[styles.tile, isMagazine && styles.tileMagazine]}>
       <View style={styles.stage}>
-        <View style={[styles.silhouette, silhouetteStyles[kind], isMagazine && styles.silhouetteMagazine]}>
-          <View style={[styles.innerLine, isMagazine && styles.innerLineMagazine]} />
-        </View>
+        {imageUri ? (
+          <Image
+            accessibilityIgnoresInvertColors
+            contentFit="cover"
+            source={{ uri: imageUri }}
+            style={styles.photo}
+            transition={400}
+          />
+        ) : (
+          <View style={[styles.silhouette, silhouetteStyles[kind], isMagazine && styles.silhouetteMagazine]}>
+            <View style={[styles.innerLine, isMagazine && styles.innerLineMagazine]} />
+          </View>
+        )}
       </View>
       <View style={styles.caption}>
         <Text style={[styles.label, isMagazine && styles.labelMagazine]}>{label}</Text>
@@ -67,6 +96,10 @@ const styles = StyleSheet.create({
   },
   innerLineMagazine: {
     borderColor: colors.smoke[500],
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
   },
   caption: {
     gap: spacing[1],
@@ -133,5 +166,36 @@ const silhouetteStyles = StyleSheet.create({
     width: sizing.garment.cap.width,
     height: sizing.garment.cap.height,
     borderRadius: radius.pill,
+  },
+  knit: {
+    width: sizing.garment.knit.width,
+    height: sizing.garment.knit.height,
+  },
+  dress: {
+    width: sizing.garment.dress.width,
+    height: sizing.garment.dress.height,
+  },
+  shorts: {
+    width: sizing.garment.shorts.width,
+    height: sizing.garment.shorts.height,
+  },
+  coat: {
+    width: sizing.garment.coat.width,
+    height: sizing.garment.coat.height,
+  },
+  heel: {
+    width: sizing.garment.heel.width,
+    height: sizing.garment.heel.height,
+    borderRadius: radius.xs,
+  },
+  flat: {
+    width: sizing.garment.flat.width,
+    height: sizing.garment.flat.height,
+    borderRadius: radius.xs,
+  },
+  bag: {
+    width: sizing.garment.bag.width,
+    height: sizing.garment.bag.height,
+    borderRadius: radius.xs,
   },
 });

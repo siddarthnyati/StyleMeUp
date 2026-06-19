@@ -31,7 +31,7 @@ export function OutfitComposition({ pieces = defaultOutfitPieces }: OutfitCompos
   return (
     <View style={styles.stage} accessibilityLabel={accessibilityLabel} accessible>
       {pieces.map((piece) => (
-        <View key={piece.label} style={[styles.piece, pieceStyles[piece.kind]]}>
+        <View key={piece.label} style={[styles.piece, pieceStyles[piece.kind as keyof typeof pieceStyles] ?? pieceStyles.tee]}>
           <View style={styles.cutout}>
             <Text style={styles.pieceName}>{piece.label}</Text>
             <Text style={styles.pieceDetail}>{piece.detail}</Text>
