@@ -3,23 +3,29 @@ import { Image } from 'expo-image';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
 
-export type GarmentKind =
-  | 'tee'
-  | 'oxford'
-  | 'knit'
-  | 'dress'
-  | 'denim'
-  | 'trouser'
-  | 'shorts'
-  | 'skirt'
-  | 'jacket'
-  | 'coat'
-  | 'sneaker'
-  | 'boot'
-  | 'heel'
-  | 'flat'
-  | 'bag'
-  | 'cap';
+// The 16-kind taxonomy as a runtime list (the source of truth); the type is
+// derived from it so the classifier, the closet picker, and the silhouettes
+// can't drift apart.
+export const GARMENT_KINDS = [
+  'tee',
+  'oxford',
+  'knit',
+  'dress',
+  'denim',
+  'trouser',
+  'shorts',
+  'skirt',
+  'jacket',
+  'coat',
+  'sneaker',
+  'boot',
+  'heel',
+  'flat',
+  'bag',
+  'cap',
+] as const;
+
+export type GarmentKind = (typeof GARMENT_KINDS)[number];
 
 type GarmentTileProps = {
   label: string;

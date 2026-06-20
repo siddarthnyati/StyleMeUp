@@ -3,14 +3,14 @@
  * @design-ref DESIGN.md §1.5, §10 (Closet), §12
  */
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, sizing, spacing, type } from '@/tokens';
 import { BasicsBlock3D } from '@/components/BasicsBlock3D/BasicsBlock3D';
 import { BottomNavigation } from '@/components/BottomNavigation/BottomNavigation';
-import { GarmentTile } from '@/components/GarmentTile/GarmentTile';
+import { GarmentTile, GARMENT_KINDS, type GarmentKind } from '@/components/GarmentTile/GarmentTile';
 import { getTodayLookForPersona, useFirstWeekStore, type Persona } from '@/lib/firstWeek';
 
 const personaOrder: Persona[] = ['work', 'going out', 'weekend'];
@@ -21,12 +21,22 @@ export function Closet() {
   const firstSignatureSaved = useFirstWeekStore((state) => state.firstSignatureSaved);
   const persona = useFirstWeekStore((state) => state.persona);
   const saveCapturedPiece = useFirstWeekStore((state) => state.saveCapturedPiece);
+  const updateCapturedPiece = useFirstWeekStore((state) => state.updateCapturedPiece);
   const saveLook = useFirstWeekStore((state) => state.saveLook);
   const setLastDressingRoomDate = useFirstWeekStore((state) => state.setLastDressingRoomDate);
   const starterSelections = useFirstWeekStore((state) => state.starterSelections);
   const tasteNotes = useFirstWeekStore((state) => state.tasteNotes);
   const [activePersona, setActivePersona] = useState<Persona>(persona);
   const [todayState, setTodayState] = useState<'ready' | 'saved' | 'passed'>('ready');
+  const [editingPieceId, setEditingPieceId] = useState<string | null>(null);
+  const editingPiece = capturedPieces.find((piece) => piece.id === editingPieceId) ?? null;
+
+  function handlePickKind(kind: GarmentKind) {
+    if (editingPieceId) {
+      updateCapturedPiece(editingPieceId, { kind, label: kind });
+    }
+    setEditingPieceId(null);
+  }
   const todayLook = getTodayLookForPersona(activePersona);
   const routeCaptured = searchParams.captured === '1';
   const hasCapturedPiece = capturedPieces.length > 0 || routeCaptured;
@@ -151,9 +161,17 @@ export function Closet() {
         {capturedPieces.length > 0 ? (
           <View style={styles.capturedSection}>
             <Text style={styles.capturedHeadline}>your pieces.</Text>
+            <Text style={styles.capturedHint}>tap a piece to fix what it is.</Text>
             <View style={styles.capturedGrid}>
               {capturedPieces.map((piece) => (
-                <View key={piece.id} style={styles.capturedCell}>
+                <Pressable
+                  accessibilityHint="opens a picker to correct the garment type"
+                  accessibilityLabel={`${piece.label}. tap to change.`}
+                  accessibilityRole="button"
+                  key={piece.id}
+                  onPress={() => setEditingPieceId(piece.id)}
+                  style={({ pressed }) => [styles.capturedCell, pressed && styles.pressed]}
+                >
                   <GarmentTile
                     detail={piece.detail}
                     imageUri={piece.imageUri}
@@ -161,7 +179,7 @@ export function Closet() {
                     label={piece.label}
                     register="Sanctuary"
                   />
-                </View>
+                </Pressable>
               ))}
             </View>
           </View>
@@ -170,6 +188,35 @@ export function Closet() {
         <BasicsBlock3D />
       </ScrollView>
       <BottomNavigation active="closet" register="Sanctuary" />
+
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setEditingPieceId(null)}
+        transparent
+        visible={editingPiece !== null}
+      >
+        <Pressable accessibilityLabel="dismiss" onPress={() => setEditingPieceId(null)} style={styles.sheetBackdrop} />
+        <View style={styles.sheet}>
+          <Text style={styles.sheetEyebrow}>what is this piece?</Text>
+          <Text style={styles.sheetHeadline}>set the type.</Text>
+          <ScrollView contentContainerStyle={styles.sheetGrid} showsVerticalScrollIndicator={false}>
+            {GARMENT_KINDS.map((kind) => {
+              const isCurrent = editingPiece?.kind === kind;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isCurrent }}
+                  key={kind}
+                  onPress={() => handlePickKind(kind)}
+                  style={({ pressed }) => [styles.kindChip, isCurrent && styles.kindChipCurrent, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.kindChipLabel, isCurrent && styles.kindChipLabelCurrent]}>{kind}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -380,6 +427,15 @@ const styles = StyleSheet.create({
     fontWeight: type.displayMd.weight,
     lineHeight: type.headlineLg.lineHeight,
   },
+  capturedHint: {
+    color: colors.smoke[300],
+    fontFamily: type.families.body,
+    fontSize: type.micro.size,
+    fontWeight: type.micro.weight,
+    letterSpacing: type.micro.letterSpacing,
+    lineHeight: type.micro.lineHeight,
+    marginTop: -spacing[2],
+  },
   capturedGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -387,6 +443,70 @@ const styles = StyleSheet.create({
   },
   capturedCell: {
     width: '48%',
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: colors.shadow,
+    opacity: 0.4,
+  },
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: '70%',
+    gap: spacing[2],
+    borderTopColor: colors.smoke[200],
+    borderTopWidth: sizing.hairline,
+    backgroundColor: colors.paper,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[5],
+    paddingBottom: spacing[7],
+  },
+  sheetEyebrow: {
+    color: colors.smoke[300],
+    fontFamily: type.families.body,
+    fontSize: type.micro.size,
+    fontWeight: type.micro.weight,
+    letterSpacing: type.micro.letterSpacing,
+    lineHeight: type.micro.lineHeight,
+  },
+  sheetHeadline: {
+    color: colors.ink,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.displayMd.size,
+    fontStyle: 'italic',
+    fontWeight: type.displayMd.weight,
+    lineHeight: type.displayMd.lineHeight,
+    marginBottom: spacing[2],
+  },
+  sheetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  kindChip: {
+    minHeight: sizing.tapTarget,
+    justifyContent: 'center',
+    borderColor: colors.smoke[200],
+    borderRadius: radius.xs,
+    borderWidth: sizing.hairline,
+    backgroundColor: colors.bone,
+    paddingHorizontal: spacing[4],
+  },
+  kindChipCurrent: {
+    borderColor: colors.ink,
+    backgroundColor: colors.ink,
+  },
+  kindChipLabel: {
+    color: colors.ink,
+    fontFamily: type.families.body,
+    fontSize: type.bodyMd.size,
+    fontWeight: type.bodyMd.weight,
+    lineHeight: type.bodyMd.lineHeight,
+  },
+  kindChipLabelCurrent: {
+    color: colors.paper,
   },
   nextAction: {
     minHeight: sizing.tapTarget,

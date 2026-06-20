@@ -281,19 +281,48 @@ couch and *sits in the closet that way*. A general user won't reshoot. We
 must turn any messy capture into a clean, catalog-style image of the
 garment — and let them correct a wrong call.
 
-### 7.1 Approach (decided): background removal → cutout on neutral field
-Essembl (§6.3) confirms the target: the garment isolated, centered, on a
-clean field, matching our wardrobe-basics catalog. Three ways to get there:
-- **Generative re-render (Gemini "Nano Banana" image edit)** — send the
-  photo + "isolate this garment, remove the background, center it on a clean
-  bone field, correct the perspective." Most on-brand (matches our catalog
-  look), reuses the-edit's Gemini infra, ~$0.04–0.10/image. Risk: can
-  alter garment details — must instruct "do not invent or change the
-  garment." **Recommended.**
-- **Pure background removal (rembg / remove.bg / on-device segmentation)** —
-  keeps the exact pixels, just cuts the background. Cheaper/safer but leaves
-  bad angles and lighting. A solid fallback / first pass.
-- **Crop only** — cheapest, weakest; rejected as insufficient per Sid.
+### 7.1 Approach (revised after cost research, 2026-06-18)
+Researched the real economics (sources at end of §7). The headline: **the
+catalog-clean look is two separate jobs with wildly different costs, and our
+first instinct — Gemini image-edit at ~$0.10/image — is the most expensive
+way to do the cheap half.** A 50-garment closet at $0.10 = $5/user just to
+tidy images; no one at scale pays that.
+
+Two jobs:
+
+**(a) Cut out the garment (remove background)** — cheap, solved, low-risk:
+- **On-device — $0 marginal.** iOS VisionKit subject lifting
+  (`VNGenerateForegroundInstanceMaskRequest`, iOS 17+) runs locally, free,
+  and is good on single garments. Catch: native API → needs a **custom Expo
+  module + EAS dev build; will NOT work in Expo Go**, and not in the
+  simulator. This is the endgame (zero marginal cost) once we leave Expo Go
+  for the App Store build anyway.
+- **Hosted model, sub-cent — stays in Expo Go.** fal.ai BiRefNet (billed
+  per compute-second, ≈ fractions of a cent/image) or Photoroom API
+  (~$0.01–0.02/image), called from our Vercel function. 50 images ≈ a few
+  cents to ~$1. remove.bg is the quality leader but ~$0.20/image — skip it.
+- Keeps the user's *actual* pixels (true to the piece); leaves wrinkles.
+
+**(b) Idealize it (de-wrinkle / flatten / catalog look)** — the expensive,
+risky half:
+- Needs **generative img2img** (FLUX Kontext, SDXL, or Gemini "nano-banana"
+  edit). Cents/image, and it can **hallucinate garment details** (wrong
+  buttons, invented logos) — a real fidelity problem for a wardrobe.
+- This is where Gemini belongs — but as an **opt-in premium step, not the
+  default**, exactly matching Sid's "on-demand only" choice.
+
+**A likely truth about Essembl:** their outfit items look like *catalog*
+product shots, not cleaned worn photos — which suggests they may **match the
+item to a product-catalog image** (embedding search) rather than clean the
+user's photo at all. Cheap and perfect-looking, but it shows a generic
+product, not your item. Our brand ("this is *yours*") argues against that as
+the default; worth knowing as an option.
+
+**Decision:** default = **hosted sub-cent background removal** (fal BiRefNet
+via our Vercel backend → cutout on a clean bone field), run **on-demand**
+(a "clean up" action on a closet item, per Sid). Generative de-wrinkle is a
+later opt-in "make it catalog-perfect." Move background removal **on-device
+(free)** when we ship the dev build. Raw photo always kept as fallback.
 
 ### 7.2 The human-in-the-loop guardrail (Sid's instinct, applied)
 Cleanup runs *after* classification, and both are gated:
@@ -306,10 +335,22 @@ Cleanup runs *after* classification, and both are gated:
   wrong silent label poisons every downstream outfit, so correction is
   always one tap away.
 
-### 7.3 Cost / latency
-Per capture: ~$0.002 classify (Flash) + ~$0.04–0.10 clean (Gemini edit).
-~30 pieces ≈ $1.50–3.00 one-time per user. Acceptable; cleanup can be
-deferred/batched and shown with the "reading the piece…" state.
+### 7.3 Cost / latency (revised)
+- **Classify (Flash vision):** ~$0.001–0.002/image (Phase B).
+- **Cut out (default):** fal BiRefNet ≈ sub-cent/image, or Photoroom
+  ~$0.01–0.02. **50 garments ≈ $0.05–$1.00 total.** On-device = $0.
+- **De-wrinkle (opt-in only):** generative, cents/image, run rarely.
+- vs. the naive Gemini-edit-everything path (~$0.10 × 50 = **$5/user**) —
+  the cheap path is **10–100× less**. That gap is the whole point.
+
+Sources: Photoroom vs remove.bg pricing —
+[boost.photos comparison](https://boost.photos/en/blog/background-removal-api-comparison-2026),
+[Eden AI](https://www.edenai.co/post/best-background-removal-apis);
+fal BiRefNet (per-compute-second) —
+[fal.ai](https://fal.ai/models/fal-ai/birefnet/v2); iOS subject lifting in
+RN needs a native module —
+[react-native-vision](https://github.com/rhdeck/react-native-vision),
+[Apple dev forum](https://developer.apple.com/forums/thread/737076).
 
 ### 7.4 Sequence
 Phase B (classify endpoint) and a sibling cleanup endpoint ship together;

@@ -79,6 +79,7 @@ type FirstWeekState = {
   markFoundationReceiptSeen: () => void;
   requestFirstSignature: (persona?: Persona) => Promise<void>;
   saveCapturedPiece: (piece?: CapturedPieceInput) => void;
+  updateCapturedPiece: (id: string, patch: CapturedPieceInput) => void;
   saveLook: (look: Omit<SavedLook, 'savedAt'>) => void;
   setAudienceIdentity: (identity: AudienceIdentity) => void;
   setLastDressingRoomDate: (date: string) => void;
@@ -592,6 +593,16 @@ export const useFirstWeekStore = create<FirstWeekState>()(
         };
         const capturedPieces = [...state.capturedPieces, capturedPiece];
 
+        set({
+          capturedPieces,
+          tasteNotes: buildTasteNotes(state.starterSelections, capturedPieces, state.savedLooks),
+        });
+      },
+      updateCapturedPiece: (id, patch) => {
+        const state = get();
+        const capturedPieces = state.capturedPieces.map((piece) =>
+          piece.id === id ? { ...piece, ...patch } : piece,
+        );
         set({
           capturedPieces,
           tasteNotes: buildTasteNotes(state.starterSelections, capturedPieces, state.savedLooks),
