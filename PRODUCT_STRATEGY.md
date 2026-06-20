@@ -357,6 +357,41 @@ Phase B (classify endpoint) and a sibling cleanup endpoint ship together;
 Phase C wires capture → classify → gate → clean → closet, with correction
 in the closet. This is the "fully working" capture loop Sid asked for.
 
+### 7.6 Head-to-head: 25-photo cleanup run (fal vs Gemini vs Photoroom)
+
+The decisive caveat first: **these don't do the same job.** fal BiRefNet and
+Photoroom *remove the background* — faithful to your real pixels, wrinkles
+and angle stay. Gemini *re-renders* — it can de-wrinkle/flatten to a catalog
+look, but it's generating, so it can alter the garment. So "clean" means two
+different things, and that drives everything below.
+
+| Engine | What it does | $/img | **25 photos** | "Clean" output | Success | Risk | Latency |
+|---|---|---|---|---|---|---|---|
+| **fal BiRefNet** | bg removal | ~$0.004 | **~$0.10** | cutout on white, **wrinkles stay** | ~95%+, faithful | thin-strap/edge errors; no de-wrinkle | ~1–2s |
+| **Photoroom API** | bg removal (+shadow) | ~$0.015 | **~$0.38** | cutout, cleaner edges, optional shadow | ~95%+, faithful | same; slightly better edges | ~1–2s |
+| **Gemini Flash Image** | generative re-render | $0.039 (batch $0.0195) | **~$0.98 (~$0.49 batch)** | catalog-like, **de-wrinkled** | "looks good" high; "matches your item" variable | **hallucination** — invents buttons/logos, shifts color | ~3–6s |
+| **Gemini Pro Image** | generative re-render | $0.10 | **$2.50** | best catalog look | highest visual; same fidelity risk | hallucination + cost | ~10–20s (our basics.ts saw 15–17s) |
+
+Reading it:
+- **Cheapest faithful cutout: fal BiRefNet** — 25 photos for a *dime*, fast,
+  and it's genuinely your garment. Downside: wrinkles/angle remain.
+- **Best edges, still cheap & faithful: Photoroom** — ~4× fal, still pennies.
+- **Only way to "no wrinkles": Gemini** — but 10–25× the cost of fal *and*
+  it can misrepresent the item (the dealbreaker risk for a wardrobe you must
+  recognize). Pro is 25× fal for marginal gain over Flash.
+
+**The sweet spot (recommended):** **fal BiRefNet as the default** (dime per
+closet, faithful, fast, on-demand per Sid) → **optional Gemini *Flash* (not
+Pro) "make it catalog-perfect"** only when the user taps it and accepts an
+idealized look. That keeps the common path at ~$0.10/closet and reserves the
+$0.039 generative cost for deliberate, rare use. Pro image is not worth 25×.
+Endgame: move bg removal **on-device (free)** at the dev-build stage.
+
+Sources: [Nano Banana / Gemini 2.5 Flash Image pricing](https://openrouter.ai/google/gemini-2.5-flash-image)
+($0.039/img, batch $0.0195), our own `the-edit` constants (Pro image $0.10);
+[BiRefNet on Replicate ~$0.0044/run](https://replicate.com/men1scus/birefnet);
+[fal GPU rates](https://fal.ai/pricing); [Photoroom vs remove.bg](https://boost.photos/en/blog/background-removal-api-comparison-2026).
+
 ### 7.5 The broader empty-image cleanup (acknowledged, scoped)
 Separate from capture: many surfaces render empty placeholder frames
 (today-look pieces, look cards) because they expect images that don't
