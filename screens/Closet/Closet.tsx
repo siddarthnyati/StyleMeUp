@@ -2,7 +2,7 @@
  * @register Sanctuary
  * @design-ref DESIGN.md §1.5, §10 (Closet), §12
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,9 @@ import { colors, radius, sizing, spacing, type } from '@/tokens';
 import { BasicsBlock3D } from '@/components/BasicsBlock3D/BasicsBlock3D';
 import { BottomNavigation } from '@/components/BottomNavigation/BottomNavigation';
 import { GarmentTile, GARMENT_KINDS, type GarmentKind } from '@/components/GarmentTile/GarmentTile';
+import { getStarterVariantsByIds } from '@/components/StarterPack/StarterPackExplorer';
 import { getTodayLookForPersona, useFirstWeekStore, type Persona } from '@/lib/firstWeek';
+import { comboItemFromCaptured, comboItemFromStarter, generateCombos } from '@/lib/comboEngine';
 
 const personaOrder: Persona[] = ['work', 'going out', 'weekend'];
 
@@ -30,6 +32,17 @@ export function Closet() {
   const [todayState, setTodayState] = useState<'ready' | 'saved' | 'passed'>('ready');
   const [editingPieceId, setEditingPieceId] = useState<string | null>(null);
   const editingPiece = capturedPieces.find((piece) => piece.id === editingPieceId) ?? null;
+
+  // Combo engine v0: pair outfits from the user's marked starter pieces
+  // (which carry tone + shape) plus captured pieces. Runs on metadata,
+  // on-device, no network (lib/comboEngine).
+  const combos = useMemo(() => {
+    const starterItems = getStarterVariantsByIds(starterSelections).map((entry) =>
+      comboItemFromStarter(entry.variant),
+    );
+    const capturedItems = capturedPieces.map(comboItemFromCaptured);
+    return generateCombos([...starterItems, ...capturedItems], { limit: 3 });
+  }, [starterSelections, capturedPieces]);
 
   function handlePickKind(kind: GarmentKind) {
     if (editingPieceId) {
@@ -182,6 +195,31 @@ export function Closet() {
                 </Pressable>
               ))}
             </View>
+          </View>
+        ) : null}
+
+        {combos.length > 0 ? (
+          <View style={styles.combosSection}>
+            <Text style={styles.combosHeadline}>outfits from your closet.</Text>
+            <Text style={styles.capturedHint}>built from what you marked and captured.</Text>
+            {combos.map((combo) => (
+              <View key={combo.id} style={styles.comboCard}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.comboRow}>
+                  {combo.items.map((item) => (
+                    <View key={`${combo.id}-${item.id}`} style={styles.comboItemCell}>
+                      <GarmentTile
+                        detail={item.detail}
+                        imageUri={item.imageUri}
+                        kind={item.kind}
+                        label={item.label}
+                        register="Sanctuary"
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+                <Text style={styles.comboRationale}>{combo.rationale}</Text>
+              </View>
+            ))}
           </View>
         ) : null}
 
@@ -443,6 +481,35 @@ const styles = StyleSheet.create({
   },
   capturedCell: {
     width: '48%',
+  },
+  combosSection: {
+    gap: spacing[3],
+  },
+  combosHeadline: {
+    color: colors.ink,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.headlineLg.size,
+    fontStyle: 'italic',
+    fontWeight: type.displayMd.weight,
+    lineHeight: type.headlineLg.lineHeight,
+  },
+  comboCard: {
+    gap: spacing[2],
+  },
+  comboRow: {
+    gap: spacing[2],
+    paddingVertical: spacing[1],
+  },
+  comboItemCell: {
+    width: 124,
+  },
+  comboRationale: {
+    color: colors.ink,
+    fontFamily: type.families.displayMagazine,
+    fontSize: type.bodyLg.size,
+    fontStyle: 'italic',
+    fontWeight: type.bodyLg.weight,
+    lineHeight: type.bodyLg.lineHeight,
   },
   sheetBackdrop: {
     flex: 1,
