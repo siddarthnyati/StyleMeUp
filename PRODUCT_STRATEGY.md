@@ -593,3 +593,43 @@ cutouts (this work); (b) signature/look pieces should pull from the
 wardrobe-basics catalog by kind+tone instead of empty silhouettes;
 (c) audit every `GarmentTile`/composition without an image source. Tracked
 separately so it doesn't block the camera loop.
+
+---
+
+## 10. Decisions log (2026-06-19)
+
+### 10.1 The combo judge — rules now, LLM-as-judge + CoT next (not either/or)
+- **v0 (shipped):** deterministic rule-based ranker (`lib/comboEngine.ts`).
+  On-device, instant, free, explainable. Generate valid outfits, score by
+  rules (one accent max · formality coherence · season match · pattern
+  balance · completeness), rank. Works today on starter selections (which
+  carry tone+shape) + captured pieces — no network.
+- **v1 (next):** **LLM-as-judge with chain-of-thought**, judging only the
+  **top ~5** rule-ranked combos on their *metadata* (text, not images →
+  pennies), **grounded in the-edit's current trend** + DESIGN.md. CoT so it
+  reasons before scoring; cache verdicts. Reuses the proven the-edit QA
+  pattern (LLM-as-judge against a rubric). The wear-graph gradually takes
+  over as the personal ranker.
+- Sid's instincts map cleanly: a **table** = the rule weights + a small
+  color/formality compatibility table (the deterministic layer); **follow
+  trends** = the trend injected into the v1 judge's context.
+
+### 10.2 Reusing captured images — embeddings, not photos; consent + discipline
+The idea: user captures could help *other* users (onboarding pattern-match,
+"you probably own these"). Build it privacy-first and memory-light:
+- **Reuse the embedding + cleaned cutout + attributes, never the raw personal
+  photo.** A vector (~2KB) and an anonymized garment cutout carry the
+  matching value without the user's home/face/context. Raw photos stay
+  on-device. **Only with explicit consent.**
+- **Memory discipline:** on-device — downscale, cap stored count, evict old
+  raw frames. Server-side — store cutout + vector + metadata, *not* raw
+  images. This keeps storage/cost bounded as the catalog grows.
+- **Why it's a moat:** an aggregate of real users' wardrobes (as anonymized
+  embeddings) is ground truth on *what people actually own and wear* —
+  better than affiliate feeds for onboarding/pattern-match, and proprietary.
+  It also feeds "you probably own these" (DESIGN.md §12) without buying a
+  catalog.
+- **Now vs later:** needs auth + consent + server storage = V2. For the
+  current on-device build, keep everything local but shape the data model
+  (item = {attributes, embedding, cutoutRef}) so it can graduate to the
+  shared catalog later without rework.
