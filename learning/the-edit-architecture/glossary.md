@@ -4348,6 +4348,381 @@ Constitutional AI / RLHF, Open vs closed weights.
 ---
 ---
 
+# Part IX · Embeddings, vector search & the combo engine
+
+The concepts behind the styleMeUp *app* (not the-edit pipeline): how a
+photo becomes searchable, how Essembl matches your photo to a catalog, and
+how we actually pair clothes into outfits. This is the highest-value cluster
+for a 2026 AI PM interview — "embeddings + vector search" is the backbone of
+search, recommendations, RAG, and personalization everywhere.
+
+---
+
+## 31. Embeddings
+
+**Tagline.** Basically, an embedding turns a thing — a word, a sentence, an
+image of a shirt — into a list of numbers (a "vector") that captures its
+*meaning*, so that similar things end up with similar numbers. A navy crew
+tee and a black crew tee land close together; a navy tee and a hiking boot
+land far apart. The model that produces them was trained so that "close in
+numbers" means "close in meaning." Once everything is numbers, a computer
+can do math on meaning: find the nearest, cluster the similar, measure how
+related two things are. Embeddings are the bridge from "stuff humans
+understand" to "stuff computers can compare at scale." They're the
+foundation under search, recommendations, RAG retrieval, and visual
+matching. A typical embedding is a few hundred to a couple thousand numbers
+long (e.g. 512 or 768 dimensions).
+
+**The analogy.** Think of a giant map where every piece of clothing has a
+GPS coordinate, but instead of latitude/longitude (2 numbers) it's 512
+numbers. Things that are alike are placed near each other on the map —
+all the white sneakers in one neighborhood, all the wool coats in another.
+"Finding similar items" becomes "find what's nearby on the map." The
+embedding model is the cartographer that decides where everything goes.
+
+**How it works (no math).** You feed your item (text or image) into an
+embedding model. It outputs the vector. You do this once per item and store
+the vector. To compare two items, you measure the "distance" between their
+vectors (cosine similarity — basically "do these point the same
+direction?"). Small distance = similar. That's it. The intelligence is all
+baked into the model that places things on the map well.
+
+**What it is NOT.** Not the same as classification (that outputs a *label*;
+embeddings output *coordinates* you can compare). Not human-readable — the
+512 numbers mean nothing to you, only their *relative positions* matter.
+Not one-size-fits-all — a general image embedder is okay for clothes, but a
+*fashion-tuned* one (FashionCLIP, §33) places garments far more accurately
+because it learned on fashion specifically.
+
+**In styleMeUp.** Two places embeddings matter: (1) "shop similar" / catalog
+matching — embed the user's photo, find the nearest catalog product (§33);
+(2) eventually, the wear-graph — embed outfits the user loved to find more
+like them. We'd store vectors in **pgvector** (§32), already in our Supabase.
+
+**Hiring-manager dialogue.**
+
+> **HM:** What's an embedding, in one breath?
+>
+> **You:** A way to turn a thing into a list of numbers that captures its
+> meaning, so similar things have similar numbers. Once everything's
+> numbers, "find similar" is just "find nearby," and "how related are
+> these two" is just a distance. It's the foundation under search,
+> recommendations, and RAG.
+>
+> **HM:** Why not just use tags/keywords instead of these number vectors?
+>
+> **You:** Tags are brittle — they only match exact words you thought to
+> add. Embeddings capture meaning you didn't tag. A search for "quiet
+> minimalist top" can surface a tee tagged only "crewneck cotton" because
+> they're near each other in meaning-space. Tags are a filing cabinet;
+> embeddings are a map. You often use both — tags/keywords for hard
+> filters, embeddings for fuzzy similarity.
+>
+> **HM:** What decides if an embedding is good?
+>
+> **You:** Whether "close in numbers" reliably means "close the way humans
+> judge similarity *for your task*." A generic embedder might put a swimsuit
+> near a sports bra (both stretchy, skin-toned) when a fashion app wants
+> them far apart. So you pick or fine-tune the embedder for your domain and
+> measure it on real retrieval examples — does the right product come back
+> in the top few results?
+
+**To go deeper.** Search "what are vector embeddings" (Pinecone/Weaviate
+explainers); the original CLIP paper (text+image embeddings); cosine
+similarity.
+
+---
+
+## 32. Vector search / ANN (and pgvector)
+
+**Tagline.** Basically, once your items are embeddings (lists of numbers on
+that meaning-map), **vector search** is how you find the nearest ones to a
+query *fast*, even across millions of items. The naive way — compare the
+query to every single item — is accurate but slow at scale (a million
+comparisons per search). So in practice we use **ANN (approximate nearest
+neighbor)**: clever indexes that find *almost certainly* the closest matches
+without checking everything, trading a tiny bit of accuracy for a massive
+speed-up (milliseconds instead of seconds). A **vector database** is
+infrastructure built to store embeddings and run ANN search — Pinecone,
+Weaviate, Milvus are dedicated ones; **pgvector** is an extension that adds
+this to plain Postgres, which is what we'd use because our Supabase *is*
+Postgres. So we get vector search without a new piece of infrastructure.
+
+**The analogy.** Finding the nearest coffee shop. The slow-but-perfect way:
+measure the distance to every coffee shop in the city. The fast way: you
+already know you're downtown, so you only check downtown shops — you skip
+99% of the city and still find the closest one. ANN is that "only check the
+right neighborhood" trick for the meaning-map. pgvector is having that map
+search built into the database you already own, instead of renting a
+separate specialist.
+
+**How it works (no math).** Store each item's vector in a column. Build an
+index (e.g. HNSW — think "a network of shortcuts between nearby points").
+At query time, embed the query, hand it to the index, get back the top-K
+nearest items in milliseconds. You can combine it with normal SQL filters
+("nearest *tops* under formality 3").
+
+**What it is NOT.** Not exact by default — ANN is approximate (you can tune
+how approximate). Not a different database necessarily — pgvector keeps it
+in Postgres. Not magic relevance — it only finds what's near in *embedding*
+space, so it's only as good as your embeddings (§31).
+
+**In styleMeUp.** pgvector in Supabase stores catalog (and later wardrobe /
+outfit) embeddings; ANN powers "shop similar" and our in-house image
+matching for empty frames — no new vendor, no new bill.
+
+**Hiring-manager dialogue.**
+
+> **HM:** Why approximate? Why not exact nearest neighbor?
+>
+> **You:** Exact means comparing the query to every item — fine for
+> thousands, too slow for millions per search. ANN uses an index to skip
+> almost everything and still return the right answers ~99% of the time,
+> in milliseconds. For search/recommendations, that accuracy/speed trade
+> is almost always worth it; you tune the knob if you need more precision.
+>
+> **HM:** Why pgvector over a dedicated vector DB like Pinecone?
+>
+> **You:** Default to what you already run. Our data's in Postgres
+> (Supabase), so pgvector means one database, one backup story, and we can
+> mix vector search with normal SQL filters in a single query. A dedicated
+> vector DB earns its keep at very large scale or extreme QPS — premature
+> for us. Fewer moving parts beats theoretical ceiling early on.
+
+**To go deeper.** pgvector README; HNSW indexing; "approximate nearest
+neighbor" overview; Supabase's pgvector docs.
+
+---
+
+## 33. Visual search & catalog matching (FashionCLIP)
+
+**Tagline.** Basically, visual search is "search by picture instead of
+words," and **catalog matching** is the specific move Essembl makes: take
+the user's photo of a garment, find the closest *product* in a catalog of
+clean store images, and show that product. Under the hood it's just §31 +
+§32 applied to images: embed every catalog image once, embed the user's
+photo, return the nearest catalog item by vector distance. The quality
+hinges on using a **fashion-tuned image embedder** — **FashionCLIP** or
+**Marqo-FashionSigLIP** (open-source, trained on a million+ fashion
+products) — because a generic image embedder confuses garments that *look*
+similar but aren't (a striped towel vs a striped shirt). Catalog matching
+is cheap (an embedding + a vector lookup, fractions of a cent) and gives a
+pristine, shoppable image — but it's **lossy**: it shows the nearest catalog
+product, *not the user's actual item* (Essembl's demo turned a striped towel
+into a different pink throw). That's why we use it for "shop similar" and
+not as the user's wardrobe truth.
+
+**The analogy.** Shazam, but for clothes. Shazam takes a noisy clip of a
+song and matches it to the exact track in its library. Catalog matching
+takes your messy garment photo and matches it to the closest item in a
+product library. The difference that bites: Shazam either nails the exact
+song or says "no match"; clothing matching always returns *something*, and
+"closest" can still be the wrong item (towel → throw). So it's Shazam that
+never says "I don't know" — useful, but you must design for the near-misses.
+
+**How it works (no math).** Build the catalog (Essembl uses affiliate
+product feeds — Rakuten/Skimlinks — which are legal *and* pay commission
+when users buy). Embed all of it with FashionCLIP, store in pgvector. User
+uploads a photo → embed it → nearest-neighbor → show the match. Premium
+upsell ("MAX"): instead of a catalog match, *generate* an exact image of
+the user's item (back to generative AI, §22-ish).
+
+**What it is NOT.** Not the same as classification (that says "it's a tee";
+matching says "it's *this specific* tee from the catalog"). Not faithful —
+it replaces your item with the nearest product, which is great for shopping,
+wrong for "this is mine." Not free of a catalog — you need the product
+library first (the real work / moat).
+
+**In styleMeUp.** Our stance (strategy §8): catalog matching = a **shopping
+layer** ("shop similar," affiliate revenue) + metadata enrichment, never the
+wardrobe image. Default wardrobe stays the user's real (cleaned) item. We
+also use the same trick *in-house* against our wardrobe-basics catalog to
+fill empty look-frames.
+
+**Hiring-manager dialogue.**
+
+> **HM:** A competitor turns a user photo into a clean catalog image. How
+> would you build that, and would you?
+>
+> **You:** Build: embed a product catalog with a fashion-tuned model like
+> FashionCLIP, store vectors in pgvector, embed the user's photo, return
+> the nearest product. Cheap — cents per hundred. The catalog itself comes
+> from affiliate feeds, which is also a revenue stream. Whether I'd ship it
+> as the *default*: no. It replaces the user's actual garment with a
+> stranger's product — fine for "shop similar," wrong for a wardrobe that's
+> supposed to be *theirs*. I'd keep the real item and use matching for
+> shopping and metadata, turning the competitor's crutch into our revenue
+> line.
+>
+> **HM:** Why a fashion-specific embedder instead of a general one?
+>
+> **You:** General image embedders cluster on the wrong cues for fashion —
+> they'll group by background or color blob and confuse a striped towel
+> with a striped shirt. FashionCLIP was trained on fashion with
+> attributes (category, color, material), so "near" means "near *as a
+> garment*." It's the difference between a usable match rate and a
+> frustrating one — measurable as recall@K on a labeled test set.
+
+**To go deeper.** Marqo-FashionSigLIP (HuggingFace); the CLIP paper;
+"visual search" e-commerce write-ups; recall@K as the eval metric.
+
+---
+
+## 34. Recommendation ranking (generate → rank → learn)
+
+**Tagline.** Basically, almost every "AI that suggests things" — Netflix
+rows, your feed, outfit combos — is two steps: **generate** a pool of valid
+candidates, then **rank** them so the best one is on top, and (the part
+that compounds) **learn** from what the user does to rank better next time.
+The generator makes sure candidates are *allowed* (a complete outfit, in
+stock, safe). The ranker decides *order* using signals — popularity,
+similarity to what you liked, freshness, business goals. The magic that
+separates products is almost never the generator (everyone can produce
+valid options); it's the **ranker** and the **feedback loop** that tunes it.
+"More interaction → better suggestions" (Essembl's own pitch) is just the
+learn step closing the loop.
+
+**The analogy.** A great butler. Generating options is easy — anyone can lay
+out ten shirts. The butler's value is *ordering* them for you: knows you
+hate yellow, knows it's raining, knows you have a meeting, puts the right
+one on top. And every time you wave one off or wear one, the butler
+remembers and gets sharper. The clothes are commodities; the *judgment of
+what to surface first*, improving with feedback, is the product.
+
+**How it works (no math).** Generate candidates that satisfy hard
+constraints. Score each with a ranking function = a weighted blend of
+signals (and/or a learned model). Sort, show top results. Capture feedback
+(click, wear, skip) and feed it back to adjust the weights/model. Cold
+start (no feedback yet) is handled by good *default* signals — popularity or
+editorial rules — until personal data accrues.
+
+**What it is NOT.** Not just "the model picks" — generation and ranking are
+usually separate stages (cheap broad generate, smart narrow rank). Not
+static — without the learn loop it never improves. Not purely personal —
+business rules and editorial taste live in the ranker too.
+
+**In styleMeUp.** This *is* the combo engine (§35): generate valid outfits,
+rank by editorial taste + personal wear-graph + occasion, learn from
+wear./next. Our ranker is the moat because it's grounded in the-edit /
+DESIGN.md taste — a corpus competitors don't have.
+
+**Hiring-manager dialogue.**
+
+> **HM:** Where's the defensibility in a recommender — everyone has the same
+> models?
+>
+> **You:** Not in the generator — valid candidates are commodity. It's in
+> the ranker's *signals* and the *feedback flywheel*. Proprietary signals
+> (our editorial taste corpus, our users' wear history) and a tight
+> learn loop produce rankings competitors can't replicate even with the
+> same base models. The data and the loop are the moat, not the algorithm.
+>
+> **HM:** How do you handle cold start — a brand-new user with no history?
+>
+> **You:** Lean on non-personal signals until personal ones exist —
+> popularity, and for us editorial rules + the current trend. We give a
+> genuinely good *default* combo on day one, then personalize as wear
+> feedback arrives. A pure-personalization competitor has nothing but a
+> guess on day one; our editorial layer is the cold-start advantage.
+
+**To go deeper.** "Two-tower" / candidate-generation-then-ranking
+architectures; learning-to-rank; the explore/exploit tradeoff.
+
+---
+
+## 35. The combo engine — how outfit pairing actually works (the PM explainer)
+
+This is the one Sid asked to understand. Plain language, with the
+accuracy/benchmark reality.
+
+**Tagline.** Basically, pairing outfits is **not** done by looking at the
+pictures — it's done on each item's **metadata** (a few attributes per
+garment), by following styling **rules** to build complete, non-clashing
+outfits, then **ranking** them by taste. The photo is only used at the start
+(to read the attributes) and at the end (to show the result). The "brain"
+in the middle is metadata + rules + ranking.
+
+**The analogy.** A recipe, not a photograph. To cook a balanced meal you
+don't stare at photos of ingredients — you reason over their *properties*
+(protein, starch, veg; flavors that go together). Outfit-building is the
+same: reason over each garment's properties (slot, color, formality,
+pattern, season) and assemble a balanced "meal." A wrinkled photo of the
+chicken doesn't change the recipe — only its *properties* matter.
+
+**The five attributes that drive a combo** (the "feature vector"):
+
+| Attribute | What it decides | Plain example |
+|---|---|---|
+| **slot** | outfit completeness | one top + one bottom + one footwear (not two tops) |
+| **color** | does it clash | navy + cream works; red + orange fights |
+| **formality** (1–5) | occasion fit | no gym shorts with a blazer |
+| **pattern** | visual balance | don't put two loud prints together |
+| **season/weight** | sensible | no wool coat with linen shorts |
+
+**How a combo gets built (step by step, no math):**
+1. **Read attributes** from each captured item (the classifier does this —
+   it's why we classify "for combining," not just to name things).
+2. **Generate** candidates: pick one item per slot such that hard rules
+   pass (colors don't clash, formality is coherent, season matches, not two
+   loud patterns). This yields many *valid* outfits.
+3. **Rank** them by taste: editorial rules (DESIGN.md) + the week's trend +
+   the user's past wear → best on top.
+4. **Show** the top combo (clean visual board).
+5. **Learn** from wear./next. → next time, better order.
+
+**Now the part Sid asked — accuracy and benchmarks (honestly):**
+
+- **There is no single "outfit accuracy %" the way there is for, say, image
+  classification.** "Is this outfit good?" is *subjective and personal*, so
+  the field measures it indirectly. Be ready to say that out loud in an
+  interview — it signals maturity.
+- **What the *inputs* are measured on (objective):**
+  - *Classification* (slot/attributes): standard accuracy / F1 on a labeled
+    test set. Modern vision models hit **~90%+** on coarse garment category;
+    **slot-level** (top vs bottom vs footwear) is easier still, comfortably
+    high. Fine-grained kind (tee vs knit) is lower and — crucially for us —
+    *doesn't matter* (we gate on slot, §9.1).
+  - *Color*: very reliable; the main wrinkle is naming/lighting, not getting
+    it roughly right.
+  - *Visual matching* (the catalog stuff): measured by **recall@K** — "is
+    the right product in the top K results?" Good fashion retrieval systems
+    report high recall@5/@10; that's the number to ask a vendor for.
+- **What the *outfit output* is measured on (subjective → proxied):**
+  - *Offline*: "fill-in-the-blank" benchmarks (FITB — given 3 of 4 items,
+    does the model pick the human-chosen 4th?) and "compatibility AUC" on
+    datasets like **Polyvore** (curated outfits). Research systems report
+    compatibility AUC in the ~0.85–0.9+ range and FITB accuracy that beats
+    random by a wide margin — but these measure "agrees with the dataset's
+    taste," not *your* user's.
+  - *Online (what actually counts)*: the real benchmark is **user
+    behavior** — wear-rate (did they wear the combo?), save-rate,
+    thumbs/next ratio, retention. This is the number that matters and the
+    one our wear-graph is designed to move.
+- **So the honest framing:** input accuracy is high and objectively
+  measurable (and we only need it where it changes the combo — the slot).
+  Output "accuracy" is taste, so we measure it by *engagement* and improve
+  it with the *feedback loop*, not by chasing a benchmark number. The moat
+  isn't a higher accuracy score; it's a better-ranked, faster-learning,
+  editorially-grounded suggestion.
+
+**The one-paragraph version for an interview:** "Outfit pairing runs on
+metadata, not images: we extract a few attributes per garment — slot, color,
+formality, pattern, season — then generate complete, non-clashing outfits by
+rule and rank them by taste. We only need classification accuracy at the
+*slot* level, which is easy and ~90%+, because mislabeling a tee as a knit
+doesn't change the outfit. 'Good outfit' is subjective, so there's no single
+accuracy number — we measure the inputs objectively (classification F1,
+retrieval recall@K) and the output by engagement (wear-rate, save-rate) and
+improve it with a feedback loop. Our defensibility is the ranker: it's
+grounded in an editorial taste corpus and a wear-history flywheel
+competitors don't have."
+
+**To go deeper.** Polyvore dataset + outfit-compatibility papers; "fill in
+the blank" (FITB) and compatibility AUC; learning-to-rank; recall@K.
+
+---
+---
+
 # Appendix A · Reading order for self-study
 
 If you're learning this end-to-end:
@@ -4498,8 +4873,25 @@ it yet.
 | **Anon key** | The public Supabase credential that ships in the client. Row security is what limits it. |
 | **RLS (row-level security)** | Per-row database permissions. Off = anyone with the anon key can read/write everything. |
 | **Manifest** | The final assembled record of an issue — copy + picked images + sources — written at publish. |
+| **Embedding** | A list of numbers that captures a thing's meaning, so similar things have similar numbers. |
+| **Vector** | The list of numbers itself (an embedding). "512-dim vector" = 512 numbers. |
+| **Cosine similarity** | How "same direction" two vectors point = how similar two things are. |
+| **Vector search** | Finding the nearest embeddings to a query — "find similar by meaning." |
+| **ANN** | Approximate nearest neighbor — fast vector search that skips most items, ~99% accurate. |
+| **pgvector** | The Postgres extension that adds vector search to our existing Supabase DB. |
+| **HNSW** | A common ANN index — a network of shortcuts between nearby points. |
+| **recall@K** | Retrieval metric: is the right answer in the top K results? The number to ask a search vendor for. |
+| **FashionCLIP / FashionSigLIP** | Fashion-tuned image+text embedders; place garments accurately on the meaning-map. |
+| **Visual search** | Search by picture instead of words (embed the image, find nearest). |
+| **Catalog matching** | Match a user photo to the nearest *product* in a catalog (Essembl's free tier; lossy). |
+| **Ranker** | The step that orders valid candidates best-first; the real moat in any recommender. |
+| **Cold start** | The no-data-yet problem for a new user/item; solved with default/editorial signals. |
+| **Slot** (app) | Outfit position — top / bottom / footwear / outerwear / accessory. We gate accuracy here. |
+| **Feature vector** (combo) | The few attributes per garment the combo engine runs on (slot, color, formality, pattern, season). |
+| **Compatibility AUC / FITB** | Offline outfit-quality benchmarks (Polyvore) — "agrees with the dataset's taste," not yours. |
 
 ---
 
-*Document last updated 2026-05-18. Versioned with the rest of the
+*Document last updated 2026-06-19 (added Part IX — embeddings, vector search
+& the combo engine). Versioned with the rest of the
 artifacts in `the-edit-architecture/`.*
