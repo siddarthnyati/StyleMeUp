@@ -161,9 +161,11 @@ still ~$5/week because issues are broadcast, not per-user; per-user AI spend
 ### 4.5 Honest gaps to close (technical debt register)
 1. **No analytics/instrumentation** — zero events tracked; we are flying blind
    on every funnel claim above. Add a thin event layer before personalization.
-2. **No auth** — everything is device-local MMKV; no account = no cross-device,
-   no recovery, no cohort analysis. Supabase Auth is sitting unused.
-3. **Capture is simulated** (§1.1).
+2. **No auth** — everything is device-local (AsyncStorage); no account = no
+   cross-device, no recovery, no cohort analysis. Supabase Auth is sitting
+   unused.
+3. ~~Capture is simulated~~ — **DONE** (Phase A): real expo-camera capture
+   shipped; classification (Phase B/C) and image cleanup (§7.4) are next.
 4. **The Vanishing unbuilt** (§1.5).
 5. **Magazine issue payload unversioned** — `normalizeIssue` defends loosely;
    a schema version field would prevent silent breakage as the-edit evolves.
@@ -182,3 +184,143 @@ still ~$5/week because issues are broadcast, not per-user; per-user AI spend
 
 Brand questions to resolve along the way (DESIGN.md §15): engagement metric
 (recommend weekly looks-worn, §2), premium tier name, brand name itself.
+
+---
+
+## 6. Competitive analysis — Essembl (the `ENS/` teardown)
+
+Reviewed 2026-06-18 from 48 screenshots in `ENS/`. Essembl ("ENS") is the
+closest direct competitor: an AI-stylist wardrobe app, claimed 2M+ users,
+positioned as *"dress with confidence every day"* / *"a stylist in your
+pocket that learns your style."* Note the positioning collision — they use
+"confidence" too. The difference has to be everything *around* the word.
+
+### 6.1 Their funnel (the Cal-AI / Rise quiz playbook, executed well)
+Long, conversion-optimized onboarding before any product value:
+1. Audience (Women's / Men's / All) → age range
+2. **Pain amplification**: "How long do you spend looking for outfits every
+   morning?" (emoji slider), "How often do you think *I have nothing to
+   wear*?" — they sell the problem back to the user before the solution.
+3. **Visual vibe picker**: multi-select grid of real street-style editorial
+   photos — Casual, Chic, Minimalistic, **Quiet Luxury**, Smart Casual,
+   Streetwear. (Their taste taxonomy literally includes "Quiet Luxury" —
+   our exact lane.)
+4. Accessories preference, shopping frequency.
+5. **Social proof**: "2,001,316 users", 5-star testimonials with faces.
+6. **Thesis screen**: *"Style confidence isn't talent. It's feedback +
+   repetition. Essembl is built around this principle."*
+7. **Comparison chart**: "Get ready 2× faster with Essembl vs on your own."
+8. **Notification priming** (fake notification + finger-emoji pointing at
+   Allow), **fake "training your AI stylist" progress** (98%, "analyzing
+   your face for color matching"), then the paywall.
+
+### 6.2 Their product (three loops)
+1. **Generate outfit** — AI composes outfits from your digitized wardrobe,
+   rendered as a **flat-lay of clean background-removed cutouts** on a grey
+   canvas. Thumbs up/down ("this also trains your AI"), Save to Looks,
+   Share, a magic-wand to regenerate, (i) per item. Swipe through options.
+2. **Rate my outfit** — full-length mirror selfie → AI scores **Color / Fit
+   / Texture / Style** (x/5) + an overall star rating + tips → Share. A
+   viral, shareable acquisition loop.
+3. **AI training progress** — a persistent gamified % meter ("the more you
+   interact, the better your suggestions get") that drives return visits.
+
+Nav: home · wardrobe · generate (+) · discover · looks. Visual language:
+clean B&W, **large-radius rounded cards**, bold grotesque, one warm accent
+(terracotta) + green CTAs, **emoji everywhere**, "AI" said constantly.
+
+### 6.3 What to steal (and how, in our voice)
+1. **Background-removed cutouts are table stakes.** Their wardrobe and
+   outfits look catalog-clean because every item is isolated on a neutral
+   field. This directly validates §7.4 below — a messy captured photo looks
+   broken next to this. Highest-priority lift.
+2. **Outfit generation from the owned wardrobe**, rendered as an editorial
+   flat-lay. This is the natural superset of our "you have the base." block
+   + capture. Our version should be a *Magazine spread*, not a grey canvas.
+3. **Feedback-as-progress framing.** Make our wear./next. loop visibly teach
+   the closet ("your rail is learning"). We have the signal; we don't yet
+   show the user it's compounding.
+4. **Pain-mirroring onboarding copy.** Our personas already name "I have
+   nothing to wear" (DESIGN.md §2) — we under-use it. One quiet line in our
+   voice beats their emoji slider.
+5. **Visual taste capture** using our own magazine / wardrobe-basics imagery
+   — a far richer asset than their stock street photos.
+
+### 6.4 What to reject (this is the moat)
+1. **The generic Cal-AI aesthetic** — emoji, big rounded cards, "AI" in every
+   header. We are the deliberate opposite (DESIGN.md §4 bans all of it).
+   When every stylist app looks like a habit-tracker, looking like *Vogue*
+   is the differentiation. Do not drift toward their sameness.
+2. **The dark-pattern funnel** — fake progress bars, finger-emoji notif
+   nags, manipulative "2× faster" charts. We can borrow the *value-building
+   structure* (problem → thesis → proof) without the manipulation. Luxury
+   doesn't beg.
+3. **"AI" as a selling word** — they lead with it; we never say it
+   (§4 / §3 anti-references). Invisible AI is the premium signal.
+4. **Thumbs up/down + star-scoring taste** — quantifying a person's outfit
+   "4.9/5 Texture" is gauche for our register. We keep wear./next. and
+   editorial language. (The *dimensional* breakdown — color/fit/proportion —
+   is reusable as private styling notes, not a public score.)
+
+### 6.5 Net read
+Essembl proves the market (2M users want this) and validates our loops
+(capture → wardrobe → generate → feedback). They win on funnel
+optimization and have a real viral hook (rate-my-fit). They lose on taste —
+they're a mass-market habit-tracker wearing fashion's clothes. Our entire
+bet is that a meaningful segment will pay more for the version that feels
+like an atelier, not an app store. Don't out-Cal-AI Cal-AI; out-*Vogue*
+them. Steal the cutouts and the generate loop; reject the aesthetic and the
+dark patterns.
+
+---
+
+## 7. Captured-image cleanup (the §1.1 gap, now specified)
+
+Sid's note (2026-06-18): a real capture comes in at a weird angle on a
+couch and *sits in the closet that way*. A general user won't reshoot. We
+must turn any messy capture into a clean, catalog-style image of the
+garment — and let them correct a wrong call.
+
+### 7.1 Approach (decided): background removal → cutout on neutral field
+Essembl (§6.3) confirms the target: the garment isolated, centered, on a
+clean field, matching our wardrobe-basics catalog. Three ways to get there:
+- **Generative re-render (Gemini "Nano Banana" image edit)** — send the
+  photo + "isolate this garment, remove the background, center it on a clean
+  bone field, correct the perspective." Most on-brand (matches our catalog
+  look), reuses the-edit's Gemini infra, ~$0.04–0.10/image. Risk: can
+  alter garment details — must instruct "do not invent or change the
+  garment." **Recommended.**
+- **Pure background removal (rembg / remove.bg / on-device segmentation)** —
+  keeps the exact pixels, just cuts the background. Cheaper/safer but leaves
+  bad angles and lighting. A solid fallback / first pass.
+- **Crop only** — cheapest, weakest; rejected as insufficient per Sid.
+
+### 7.2 The human-in-the-loop guardrail (Sid's instinct, applied)
+Cleanup runs *after* classification, and both are gated:
+- If classification is confident → clean + show the result with a quiet
+  "not right? change it."
+- If ambiguous → ask before cleaning (don't spend a generation on a
+  misread).
+- The closet itself becomes a correction surface (§ task 15): tap any
+  captured piece → confirm or re-pick kind from the 16-kind taxonomy. A
+  wrong silent label poisons every downstream outfit, so correction is
+  always one tap away.
+
+### 7.3 Cost / latency
+Per capture: ~$0.002 classify (Flash) + ~$0.04–0.10 clean (Gemini edit).
+~30 pieces ≈ $1.50–3.00 one-time per user. Acceptable; cleanup can be
+deferred/batched and shown with the "reading the piece…" state.
+
+### 7.4 Sequence
+Phase B (classify endpoint) and a sibling cleanup endpoint ship together;
+Phase C wires capture → classify → gate → clean → closet, with correction
+in the closet. This is the "fully working" capture loop Sid asked for.
+
+### 7.5 The broader empty-image cleanup (acknowledged, scoped)
+Separate from capture: many surfaces render empty placeholder frames
+(today-look pieces, look cards) because they expect images that don't
+exist. Plan: (a) captured pieces now show real photos (done) → cleaned
+cutouts (this work); (b) signature/look pieces should pull from the
+wardrobe-basics catalog by kind+tone instead of empty silhouettes;
+(c) audit every `GarmentTile`/composition without an image source. Tracked
+separately so it doesn't block the camera loop.
