@@ -479,6 +479,112 @@ silhouettes. This is the §7.5 / empty-image task, and it's a mini in-house
 version of 8.1 against our own catalog. Do this now (cheap, on-brand); the
 affiliate catalog is the bigger V2.
 
+## 9. The combo engine is the product (thinking 3 moves ahead)
+
+Reframe (Sid, 2026-06-19): *the user doesn't care if we mislabel a top as
+underwear — they care that we hand them an outfit combo they love.* So the
+**combo is the product**; classification, cleanup, and catalog are only
+inputs to it. Work backward from "a combo they'll wear" and three knots
+untie themselves.
+
+### 9.1 Knot 1 — accuracy only matters where it changes the combo
+A combo breaks if we put two tops in it or call a shoe a hat. It does **not**
+break if we call a tee a "knit." So classification accuracy matters at the
+**slot** level, not the **kind** level. Define five slots:
+
+> **top · bottom · footwear · outerwear · accessory**
+
+(plus `dress` = a top+bottom in one slot). The 16 kinds map onto these.
+
+- **Gate on slot, not kind.** Auto-accept whenever the slot is confident
+  (it almost always is — tops look like tops). Only ask the human when the
+  *slot* is genuinely ambiguous (dress vs top vs skirt; bag vs garment).
+  That's rare → **minimal human-in-the-loop**, exactly as asked. We never
+  ask "tee or knit?" because the combo doesn't care.
+- This is the deterministic gate from Phase C, but tuned to the axis that
+  matters. Sid's "top as underwear is fine" is literally the design spec.
+
+### 9.2 Knot 2 — the combo brain runs on metadata, not on pixels
+A combo is computed from each item's **attributes**, not its photo's beauty.
+The combo-relevant feature vector per item:
+
+| Axis | Why it drives the combo | Source |
+|---|---|---|
+| **slot** | outfit completeness (one per slot) | classifier (high conf) |
+| **color / palette** | ~half of whether a fit "works" | classifier |
+| **formality** (1–5) | don't pair gym shorts w/ a blazer | classifier |
+| **pattern** (solid/patterned + loudness) | avoid two loud patterns clashing | classifier |
+| **season / weight** | no wool coat with linen shorts | classifier |
+| **fit / silhouette** | proportion balance (baggy↔fitted) | classifier (secondary) |
+
+**Therefore a half-wrinkled couch photo does NOT hurt the algorithm** — the
+brain never sees wrinkles, it sees `{bottom, charcoal, formality 2, solid,
+all-season, relaxed}`. Vision models read those attributes off a messy photo
+fine. This dissolves the "if I do (A) the wrinkled shirt wrecks the combo"
+fear: **it doesn't.** What wrinkles hurt is the **presentation** of the combo
+(the visual board), which is a separate, optional, downstream problem.
+
+> **The decoupling that wins:** combo BRAIN = metadata (wrinkle-proof, cheap,
+> accurate where it counts). combo PRESENTATION = clean images (cleanup or
+> catalog proxy, only when we render the board). Never conflate them again.
+> This is why authenticity-first (A) costs us nothing in combo quality.
+
+### 9.3 Knot 3 — the secret sauce is the taste ranker, not the generator
+Anyone can generate "valid" outfits (complete the slots, don't clash colors)
+— that's table stakes and Essembl already does generic AI combos. The moat is
+**which valid combo we surface first**, i.e. the **ranker**. Ours is grounded
+in assets a competitor can't clone:
+
+1. **Editorial taste — `DESIGN.md` + `the-edit`.** We already run a weekly
+   magazine with a 21K-token brand bible of what *good* looks like (color
+   system, the Vogue test, quiet-luxury rules) and a live trend each week.
+   Our combos can be **"styled by the magazine"** — ranked by editorial rules
+   + this week's trend — not generic color theory. Essembl can't; they have
+   no taste corpus.
+2. **The wear-graph — personal feedback.** wear./next. + actual wear history
+   tunes the ranker to *this* user over time (feedback + repetition — their
+   own stated thesis, but we do it with editorial grounding, not vibes).
+3. **"You have the base."** Rank combos that use mostly what they own, then
+   suggest *one* piece to complete it → tasteful affiliate revenue (§8.3),
+   the funnel as a feature.
+
+### 9.4 The loop (generate → rank → present → learn)
+```
+items + feature vectors
+   │  generate: constraint satisfaction
+   │   (one per slot · color harmony · formality coherence ·
+   │    season match · pattern balance)  → many valid combos
+   ▼
+   rank: editorial(DESIGN.md + trend) × personal(wear-graph) × occasion
+   ▼
+   present: clean visual board (cleaned cutouts / catalog proxy — presentation only)
+   ▼
+   learn: wear. / next. → update personal ranker
+```
+The flywheel: more wear-feedback → better personal ranking → combos they
+love more → more wear-feedback. The editorial layer solves cold-start (good
+combos on day one, before any personal data) — Essembl's pure-personalization
+model has nothing on day one but a generic guess.
+
+### 9.5 What this means for the build (revised sequence)
+Everything now serves the combo. Order:
+1. **Phase C, tuned to slots** — capture → classify into the **combo feature
+   vector** (slot + color + formality + pattern + season), gate on **slot**,
+   auto-accept the rest. (Upgrades the classifier's job from "name it" to
+   "describe it for combining.")
+2. **Combo engine v0** — constraint generator + a first editorial ranker over
+   the user's items (even 5–10 captured pieces → real combos). *This is the
+   product; build it early, even rough.*
+3. **Presentation** — populate empty frames + clean the board from
+   wardrobe-basics (in-house matching), cleanup the real items on-demand.
+4. **Personalization + shop-similar** — wear-graph ranker; affiliate match.
+
+Net 3-moves-ahead: classify *for combining* → generate+rank combos with
+editorial taste → learn from wear. Photo quality and catalog are presentation
+and revenue layers around that core, not the core. The secret sauce is the
+**editorially-grounded ranker + the wear-graph flywheel** — and we already
+own both ingredients (`the-edit`, `DESIGN.md`, the capture loop).
+
 ### 7.5 The broader empty-image cleanup (acknowledged, scoped)
 Separate from capture: many surfaces render empty placeholder frames
 (today-look pieces, look cards) because they expect images that don't
