@@ -392,6 +392,93 @@ Sources: [Nano Banana / Gemini 2.5 Flash Image pricing](https://openrouter.ai/go
 [BiRefNet on Replicate ~$0.0044/run](https://replicate.com/men1scus/birefnet);
 [fal GPU rates](https://fal.ai/pricing); [Photoroom vs remove.bg](https://boost.photos/en/blog/background-removal-api-comparison-2026).
 
+## 8. The big reveal: Essembl is catalog-matching, not cleanup
+
+A second batch of screenshots (2026-06-18) settled it. Essembl does **not**
+clean your photo. It **visually matches your photo to a product-image
+library** and shows you the catalog item. Evidence, verbatim from their UI:
+
+- Upload screen: *"Upload any photo. Selfies, flat lays, screenshots — **we'll
+  find these items in our library** and add them to your wardrobe. Instant &
+  free · no waiting."*
+- "Review Extracted Items": a user photographs a **striped pink/white towel**
+  (in a store, with a price tag) → the app returns a **different pink
+  *patterned* throw** from its catalog. Close category, wrong item — the
+  tell-tale signature of nearest-neighbor matching, not cleanup.
+- The paywall, in their own words: *"**Upgrade to MAX — Generate exact AI
+  items for every piece, instead of catalog matches.**"* So: **free = catalog
+  match (lossy), paid = generative exact item.** The opposite of what I first
+  assumed.
+- Their wardrobe grid is pristine because every tile is a real **e-commerce
+  product photo**, not the user's photo.
+- Their "Create" menu: Add to Wardrobe, Generate Outfit, Outfit Check (rate),
+  Outfit Glow Up (styling tips), **Item Finder (identify & shop)** — the
+  shopping intent is explicit.
+
+### 8.1 How the matching is done (cheap, and mostly open-source)
+1. **Embed** every catalog image once with a fashion-tuned model —
+   **Marqo-FashionSigLIP / FashionCLIP** (Apache-2.0, ~150M params, trained on
+   1M+ fashion products, free on HuggingFace).
+2. **Embed** the user's photo the same way.
+3. **Nearest-neighbour** search (cosine) in a vector store — **we already have
+   pgvector in Supabase**. Return the closest catalog item(s).
+Cost per add ≈ one embedding + one vector query = **fractions of a cent** —
+*cheaper than background removal*, which is why their default is free. The
+"image" is free because it's a catalog asset they already host.
+
+### 8.2 Where the catalog comes from (they didn't build it — and we wouldn't "steal" it)
+The honest startup answer is **affiliate product feeds**, not scraping:
+- **Rakuten Advertising / Skimlinks / ShopStyle / CJ / Awin / Impact** let
+  publishers pull retailer product catalogs (name, **image URL**, product URL,
+  price, SKU, category, description) via SFTP/API. Millions of clean product
+  images + metadata, **licensed** to show because it drives sales — and it
+  **pays you a commission** when the user buys. The catalog match *is* the
+  shopping funnel. ShopStyle is literally this as a service.
+- **Public datasets** (for training/prototyping the matcher, not as the live
+  catalog): DeepFashion (~800K), DeepFashion2 (491K images / 801K items, 13
+  categories, masks + landmarks), ModaNet, Kaggle "Fashion Product Images".
+- So: don't scrape copyrighted store images for commercial use. Use affiliate
+  feeds for the live catalog (legal + monetizable) and open datasets to train.
+
+### 8.3 How we proceed — the reframe
+Catalog-match is cheaper and looks cleaner, but it has a fatal flaw **for our
+brand**: it *replaces your actual item with a stranger's product* (their own
+demo turned a towel into the wrong throw). For a "confidence engine" built on
+*your* wardrobe, with an anti-haul, atelier, "this is yours" positioning,
+showing stock photos of clothes you don't own is a lie — and it's exactly the
+generic, mass-market feel we're differentiating against.
+
+**Recommendation — authenticity-first, catalog as a shopping/enrichment layer
+(not a replacement):**
+1. **Default stays YOUR real item, cleaned** (background-removed cutout, §7) —
+   authentic, on-brand, cheap.
+2. **Classification (Phase B, shipped)** gives our taxonomy + colour/material.
+3. **Add catalog matching as two *separate* features, never as the wardrobe
+   image:**
+   - **"Shop similar"** — match the item to affiliate-feed products → revenue
+     stream Essembl monetizes and we'd otherwise leave on the table. Lives in
+     Discover / "complete the look," our Magazine register.
+   - **Metadata enrichment** — use the match to *suggest* brand/name/material,
+     which the user can accept, while keeping their photo.
+4. **Generative "exact render"** (Gemini) stays the rare premium polish.
+
+Net: Essembl replaces your wardrobe with clean stock photos (tidy but fake);
+we keep your real wardrobe **and** add the shopping layer. Authentic *and*
+monetizable — a stronger position, not a weaker one. The matching stack
+(FashionSigLIP + pgvector) is cheap and mostly built into what we already run;
+the catalog is an affiliate-feed integration (revenue-positive) — a clear V2,
+not a weekend pivot. The weekend loop stays: capture → classify → clean (real
+item).
+
+### 8.4 Immediate tie-in: our own empty frames
+The closet "today" look renders **empty placeholder frames** (blue oxford /
+raw denim / black boot). We already have a small clean catalog — the
+**wardrobe-basics** Gemini product shots — so look/signature pieces should be
+populated by matching kind+tone to wardrobe-basics instead of showing empty
+silhouettes. This is the §7.5 / empty-image task, and it's a mini in-house
+version of 8.1 against our own catalog. Do this now (cheap, on-brand); the
+affiliate catalog is the bigger V2.
+
 ### 7.5 The broader empty-image cleanup (acknowledged, scoped)
 Separate from capture: many surfaces render empty placeholder frames
 (today-look pieces, look cards) because they expect images that don't
