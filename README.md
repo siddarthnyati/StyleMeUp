@@ -4,6 +4,8 @@
 >
 > *We give people the power to feel like the version of themselves they already are — but better dressed.*
 
+![StyleMeUp — two registers: Magazine on true black, Sanctuary on paper white](assets/readme/brand-board.png)
+
 **Status**: pre-MVP · brand name is a working title (see `DESIGN.md` §15)
 **Owner**: Sid
 
